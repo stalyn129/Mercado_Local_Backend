@@ -1,0 +1,114 @@
+package com.mercadolocalia.entities;
+
+import jakarta.persistence.*;
+import java.time.LocalDateTime;
+
+@Entity
+@Table(name = "pedidos")
+public class Pedido {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id_pedido")
+    private Integer idPedido;
+
+    @ManyToOne
+    @JoinColumn(name = "id_consumidor", nullable = false)
+    private Consumidor consumidor;
+
+    @ManyToOne
+    @JoinColumn(name = "id_vendedor", nullable = false)
+    private Vendedor vendedor;
+
+    @Column(name = "fecha_pedido")
+    private LocalDateTime fechaPedido;
+
+    @Column(name = "estado_pedido")
+    private String estadoPedido;
+
+    @Column(name = "subtotal")
+    private Double subtotal;
+
+    @Column(name = "iva")
+    private Double iva;
+
+    @Column(name = "total")
+    private Double total;
+
+    @Column(name = "metodo_pago")
+    private String metodoPago;
+
+    // GETTERS & SETTERS
+
+    public Integer getIdPedido() {
+        return idPedido;
+    }
+
+    public void setIdPedido(Integer idPedido) {
+        this.idPedido = idPedido;
+    }
+
+    public Consumidor getConsumidor() {
+        return consumidor;
+    }
+
+    public void setConsumidor(Consumidor consumidor) {
+        this.consumidor = consumidor;
+    }
+
+    public Vendedor getVendedor() {
+        return vendedor;
+    }
+
+    public void setVendedor(Vendedor vendedor) {
+        this.vendedor = vendedor;
+    }
+
+    public LocalDateTime getFechaPedido() {
+        return fechaPedido;
+    }
+
+    public void setFechaPedido(LocalDateTime fechaPedido) {
+        this.fechaPedido = fechaPedido;
+    }
+
+    public String getEstadoPedido() {
+        return estadoPedido;
+    }
+
+    public void setEstadoPedido(String estadoPedido) {
+        this.estadoPedido = estadoPedido;
+    }
+
+    public Double getSubtotal() {
+        return subtotal;
+    }
+
+    public void setSubtotal(Double subtotal) {
+        this.subtotal = subtotal;
+    }
+
+    public Double getIva() {
+        return iva;
+    }
+
+    public void setIva(Double iva) {
+        this.iva = iva;
+    }
+
+    public Double getTotal() {
+        return total;
+    }
+
+    public void setTotal(Double total) {
+        this.total = total;
+    }
+
+    public String getMetodoPago() {
+        return metodoPago;
+    }
+
+    public void setMetodoPago(String metodoPago) {
+        this.metodoPago = metodoPago;
+    }
+}
