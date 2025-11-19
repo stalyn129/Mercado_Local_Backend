@@ -32,7 +32,7 @@ public class UserDetailsServiceImpl implements UserDetailsService {
 
         // Asignar rol de Spring Security
         SimpleGrantedAuthority authority =
-                new SimpleGrantedAuthority("ROLE_" + usuario.getRol().getNombreRol());
+        		new SimpleGrantedAuthority(usuario.getRol().getNombreRol());
 
         return new User(
                 usuario.getCorreo(),

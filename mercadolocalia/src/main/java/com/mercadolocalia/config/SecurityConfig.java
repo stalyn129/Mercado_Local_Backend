@@ -13,7 +13,6 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 import com.mercadolocalia.security.jwt.JwtAuthenticationFilter;
-import com.mercadolocalia.services.impl.UserDetailsServiceImpl;
 
 @Configuration
 public class SecurityConfig {
@@ -21,20 +20,11 @@ public class SecurityConfig {
     @Autowired
     private JwtAuthenticationFilter jwtFilter;
 
-    @Autowired
-    private UserDetailsServiceImpl userDetailsService;
-
-    // ============================
-    // 1) PASSWORD ENCODER (BCrypt)
-    // ============================
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
-    // ============================
-    // 2) SECURITY FILTER CHAIN
-    // ============================
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
@@ -42,20 +32,20 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                    // RUTAS PÚBLICAS
+                    // 🔓 RUTAS PÚBLICAS
                     .requestMatchers("/auth/**").permitAll()
                     .requestMatchers("/swagger-ui/**", "/swagger-ui.html").permitAll()
-                    .requestMatchers("/api-docs/**").permitAll()
+                    .requestMatchers("/v3/api-docs/**", "/api-docs/**").permitAll()
 
-                    // RUTAS PRIVADAS POR ROL
-                    .requestMatchers("/admin/**").hasRole("ADMIN")
-                    .requestMatchers("/vendedor/**").hasRole("VENDEDOR")
-                    .requestMatchers("/consumidor/**").hasRole("CONSUMIDOR")
+                    // 🔐 RUTAS POR ROL (usando authority REAL)
+                    .requestMatchers("/admin/**").hasAuthority("ADMIN")
+                    .requestMatchers("/vendedor/**").hasAuthority("VENDEDOR")
+                    .requestMatchers("/consumidor/**").hasAuthority("CONSUMIDOR")
 
-                    // 🔵 NUEVO: cualquier usuario logueado puede acceder
+                    // 🔐 cualquiera logueado puede ver su perfil
                     .requestMatchers("/usuarios/**").authenticated()
 
-                    // cualquier otra ruta requiere token
+                    // 🔐 todo lo demás requiere token
                     .anyRequest().authenticated()
             )
             .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
@@ -63,10 +53,6 @@ public class SecurityConfig {
         return http.build();
     }
 
-
-    // ============================
-    // 3) AUTHENTICATION MANAGER
-    // ============================
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration configuration) throws Exception {
         return configuration.getAuthenticationManager();
