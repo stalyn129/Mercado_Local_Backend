@@ -5,6 +5,7 @@ import java.time.LocalDateTime;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -41,23 +42,20 @@ public class AuthenticationService {
     @Autowired
     private AuthenticationManager authenticationManager;
 
-    // =============================================================
-    // REGISTRO DE USUARIO
-    // =============================================================
+    // ============================
+    // REGISTRO
+    // ============================
     public AuthResponse registrar(RegisterRequest request) {
 
-        // Validar si el correo ya está registrado
         if (usuarioRepository.existsByCorreo(request.getCorreo())) {
             AuthResponse response = new AuthResponse();
             response.setMensaje("El correo ya está registrado");
             return response;
         }
 
-        // Buscar rol
         Rol rol = rolRepository.findById(request.getIdRol())
                 .orElseThrow(() -> new RuntimeException("Rol no encontrado"));
 
-        // Crear usuario
         Usuario usuario = new Usuario();
         usuario.setNombre(request.getNombre());
         usuario.setApellido(request.getApellido());
@@ -71,10 +69,8 @@ public class AuthenticationService {
 
         usuarioRepository.save(usuario);
 
-        // Generar token
         String tokenJwt = jwtService.generarToken(usuario);
 
-        // Guardar token en la BD
         Token token = new Token();
         token.setUsuario(usuario);
         token.setToken(tokenJwt);
@@ -82,7 +78,6 @@ public class AuthenticationService {
 
         tokenRepository.save(token);
 
-        // Respuesta
         AuthResponse response = new AuthResponse();
         response.setToken(tokenJwt);
         response.setMensaje("Usuario registrado exitosamente");
@@ -92,35 +87,34 @@ public class AuthenticationService {
         return response;
     }
 
-    // =============================================================
+    // ============================
     // LOGIN
-    // =============================================================
+    // ============================
     public AuthResponse login(LoginRequest request) {
 
-        // Validar credenciales con Spring Security
-        authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        request.getCorreo(),
-                        request.getContrasena()
-                )
-        );
+        // Validar credenciales
+        try {
+            authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            request.getCorreo(),
+                            request.getContrasena()
+                    )
+            );
+        } catch (Exception ex) {
+            throw new BadCredentialsException("Credenciales inválidas");
+        }
 
-        // Buscar usuario
         Usuario usuario = usuarioRepository.findByCorreo(request.getCorreo())
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
-        // Generar token
         String tokenJwt = jwtService.generarToken(usuario);
 
-        // Guardar token en BD
         Token token = new Token();
         token.setUsuario(usuario);
         token.setToken(tokenJwt);
         token.setFechaExpiracion(LocalDateTime.now().plusDays(1));
-
         tokenRepository.save(token);
 
-        // Respuesta
         AuthResponse response = new AuthResponse();
         response.setToken(tokenJwt);
         response.setMensaje("Login exitoso");
