@@ -9,7 +9,6 @@ import com.mercadolocalia.services.ConsumidorService;
 
 @RestController
 @RequestMapping("/consumidor")
-@CrossOrigin(origins = "*")
 public class ConsumidorController {
 
     @Autowired

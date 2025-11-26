@@ -55,10 +55,9 @@ public class PedidoServiceImpl implements PedidoService {
         pedido.setConsumidor(consumidor);
         pedido.setVendedor(vendedor);
         pedido.setFechaPedido(LocalDateTime.now());
-        pedido.setEstadoPedido("Pendiente");   // Estado inicial
+        pedido.setEstadoPedido("Pendiente");
         pedido.setMetodoPago(request.getMetodoPago());
 
-        // Guarda temporalmente mientras se calculan totales
         pedido.setSubtotal(0.0);
         pedido.setIva(0.0);
         pedido.setTotal(0.0);
@@ -67,9 +66,6 @@ public class PedidoServiceImpl implements PedidoService {
 
         double subtotal = 0;
 
-        // ============================================================
-        // PROCESAR DETALLES DEL PEDIDO
-        // ============================================================
         List<DetallePedido> detalles = new ArrayList<>();
 
         for (DetallePedidoAddRequest detRequest : request.getDetalles()) {
@@ -81,7 +77,6 @@ public class PedidoServiceImpl implements PedidoService {
                 throw new RuntimeException("Stock insuficiente para el producto: " + producto.getNombreProducto());
             }
 
-            // Restar stock
             producto.setStockProducto(producto.getStockProducto() - detRequest.getCantidad());
             productoRepository.save(producto);
 
@@ -101,9 +96,6 @@ public class PedidoServiceImpl implements PedidoService {
             subtotal += subtotalDetalle;
         }
 
-        // ============================================================
-        // CALCULAR IVA Y TOTAL
-        // ============================================================
         double iva = subtotal * 0.12;
         double total = subtotal + iva;
 
@@ -117,7 +109,7 @@ public class PedidoServiceImpl implements PedidoService {
     }
 
     // ============================================================
-    // OBTENER PEDIDO POR ID
+    // OBTENER POR ID
     // ============================================================
     @Override
     public Pedido obtenerPedidoPorId(Integer id) {
@@ -126,7 +118,7 @@ public class PedidoServiceImpl implements PedidoService {
     }
 
     // ============================================================
-    // LISTAR PEDIDOS POR CONSUMIDOR
+    // LISTAR POR CONSUMIDOR
     // ============================================================
     @Override
     public List<Pedido> listarPedidosPorConsumidor(Integer idConsumidor) {
@@ -138,7 +130,7 @@ public class PedidoServiceImpl implements PedidoService {
     }
 
     // ============================================================
-    // LISTAR PEDIDOS POR VENDEDOR
+    // LISTAR POR VENDEDOR
     // ============================================================
     @Override
     public List<Pedido> listarPedidosPorVendedor(Integer idVendedor) {
@@ -150,7 +142,7 @@ public class PedidoServiceImpl implements PedidoService {
     }
 
     // ============================================================
-    // LISTAR DETALLES DE UN PEDIDO
+    // LISTAR DETALLES
     // ============================================================
     @Override
     public List<DetallePedido> listarDetalles(Integer idPedido) {
@@ -162,7 +154,7 @@ public class PedidoServiceImpl implements PedidoService {
     }
 
     // ============================================================
-    // CAMBIAR ESTADO DEL PEDIDO
+    // CAMBIAR ESTADO
     // ============================================================
     @Override
     public Pedido cambiarEstado(Integer idPedido, String nuevoEstado) {

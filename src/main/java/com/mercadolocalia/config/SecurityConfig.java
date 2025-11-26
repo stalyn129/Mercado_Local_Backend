@@ -1,19 +1,21 @@
 package com.mercadolocalia.config;
 
+import com.mercadolocalia.security.jwt.JwtAuthenticationFilter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-
-import com.mercadolocalia.security.jwt.JwtAuthenticationFilter;
 
 @Configuration
 public class SecurityConfig {
@@ -30,37 +32,88 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
         http
-            // 👇 MUY IMPORTANTE PARA CORS
+            // Permitir CORS con tu configuración de WebMvcConfigurer
             .cors(Customizer.withDefaults())
 
+            // ❌ Desactivar CSRF porque usas API REST
             .csrf(csrf -> csrf.disable())
-            .sessionManagement(session -> 
+
+            // JWT = Sin sesiones
+            .sessionManagement(session ->
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             )
+
             .authorizeHttpRequests(auth -> auth
-                    // 🔓 Rutas públicas
-                    .requestMatchers("/auth/**").permitAll()
-                    .requestMatchers("/swagger-ui/**", "/swagger-ui.html").permitAll()
-                    .requestMatchers("/v3/api-docs/**", "/api-docs/**").permitAll()
 
-                    // 🔐 Rutas por rol
-                    .requestMatchers("/admin/**").hasAuthority("ADMIN")
-                    .requestMatchers("/vendedor/**").hasAuthority("VENDEDOR")
-                    .requestMatchers("/consumidor/**").hasAuthority("CONSUMIDOR")
+                /* ========================================
+                   🟩 SWAGGER (esto permite que cargue)
+                   ======================================== */
+                .requestMatchers(
+                        "/swagger-ui/**",
+                        "/swagger-ui.html",
+                        "/v3/api-docs/**",
+                        "/api-docs/**"
+                ).permitAll()
 
-                    // 🔐 Perfil autenticado
-                    .requestMatchers("/usuarios/**").authenticated()
+                /* ========================================
+                   🟩 ARCHIVOS (imágenes estáticas)
+                   ======================================== */
+                .requestMatchers("/uploads/**").permitAll()
 
-                    // Todo lo demás requiere token
-                    .anyRequest().authenticated()
+                /* ========================================
+                   🟩 RUTAS PÚBLICAS
+                   ======================================== */
+                .requestMatchers("/auth/**").permitAll()
+                .requestMatchers("/categorias/**").permitAll()
+                .requestMatchers("/subcategorias/**").permitAll()
+                .requestMatchers("/productos/todos").permitAll()
+                .requestMatchers("/productos/subcategoria/**").permitAll()
+
+                /* ========================================
+                   🟦 PRODUCTOS — SOLO VENDEDORES
+                   ======================================== */
+                .requestMatchers(
+                        "/productos/crear",
+                        "/productos/actualizar/**",
+                        "/productos/eliminar/**",
+                        "/productos/estado/**",
+                        "/productos/vendedor/**"
+                ).hasAuthority("VENDEDOR")
+
+                /* ========================================
+                   🟧 ADMINISTRADOR
+                   ======================================== */
+                .requestMatchers("/admin/**").hasAuthority("ADMIN")
+
+                /* ========================================
+                   🟪 VENDEDOR
+                   ======================================== */
+                .requestMatchers("/vendedor/**").hasAuthority("VENDEDOR")
+
+                /* ========================================
+                   🟨 CONSUMIDOR
+                   ======================================== */
+                .requestMatchers("/consumidor/**").hasAuthority("CONSUMIDOR")
+
+                /* ========================================
+                   🟫 RUTAS PRIVADAS
+                   ======================================== */
+                .requestMatchers("/usuarios/**").authenticated()
+
+                /* ========================================
+                   🔐 Cualquier otra ruta requiere token
+                   ======================================== */
+                .anyRequest().authenticated()
             )
+
+            // Filtro JWT antes del filtro de Spring Security
             .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
 
     @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) 
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration config)
             throws Exception {
         return config.getAuthenticationManager();
     }

@@ -20,15 +20,9 @@ public class CategoriaServiceImpl implements CategoriaService {
 
     @Override
     public CategoriaResponse crearCategoria(CategoriaRequest request) {
-
-        if (categoriaRepository.existsByNombreCategoria(request.getNombreCategoria())) {
-            throw new RuntimeException("La categoría ya existe");
-        }
-
         Categoria categoria = new Categoria();
         categoria.setNombreCategoria(request.getNombreCategoria());
         categoria.setDescripcionCategoria(request.getDescripcionCategoria());
-
         categoriaRepository.save(categoria);
 
         return convertir(categoria);
@@ -36,7 +30,6 @@ public class CategoriaServiceImpl implements CategoriaService {
 
     @Override
     public CategoriaResponse actualizarCategoria(Integer id, CategoriaRequest request) {
-
         Categoria categoria = categoriaRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Categoría no encontrada"));
 
@@ -66,14 +59,14 @@ public class CategoriaServiceImpl implements CategoriaService {
         return categoriaRepository.findAll()
                 .stream()
                 .map(this::convertir)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     private CategoriaResponse convertir(Categoria categoria) {
-        CategoriaResponse response = new CategoriaResponse();
-        response.setIdCategoria(categoria.getIdCategoria());
-        response.setNombreCategoria(categoria.getNombreCategoria());
-        response.setDescripcionCategoria(categoria.getDescripcionCategoria());
-        return response;
+        CategoriaResponse dto = new CategoriaResponse();
+        dto.setIdCategoria(categoria.getIdCategoria());
+        dto.setNombreCategoria(categoria.getNombreCategoria());
+        dto.setDescripcionCategoria(categoria.getDescripcionCategoria());
+        return dto;
     }
 }

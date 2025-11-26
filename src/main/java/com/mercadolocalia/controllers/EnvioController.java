@@ -10,7 +10,6 @@ import com.mercadolocalia.services.EnvioService;
 
 @RestController
 @RequestMapping("/envios")
-@CrossOrigin(origins = "*")
 public class EnvioController {
 
     @Autowired

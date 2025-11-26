@@ -10,7 +10,6 @@ import com.mercadolocalia.services.CarritoService;
 
 @RestController
 @RequestMapping("/carrito")
-@CrossOrigin("*")
 public class CarritoController {
 
     @Autowired

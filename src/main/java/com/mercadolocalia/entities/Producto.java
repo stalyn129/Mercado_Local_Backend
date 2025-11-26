@@ -12,18 +12,27 @@ public class Producto {
     @Column(name = "id_producto")
     private Integer idProducto;
 
-    @ManyToOne
+    // ============================
+    // RELACIÓN: VENDEDOR
+    // ============================
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_vendedor", nullable = false)
     private Vendedor vendedor;
 
-    @ManyToOne
-    @JoinColumn(name = "id_subcategoria")
+    // ============================
+    // RELACIÓN: SUBCATEGORÍA
+    // ============================
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_subcategoria", nullable = false)
     private Subcategoria subcategoria;
 
+    // ============================
+    // DATOS PRINCIPALES
+    // ============================
     @Column(name = "nombre_producto", nullable = false, length = 150)
     private String nombreProducto;
 
-    @Column(name = "descripcion_producto", nullable = false)
+    @Column(name = "descripcion_producto", nullable = false, columnDefinition = "TEXT")
     private String descripcionProducto;
 
     @Column(name = "precio_producto", nullable = false)
@@ -32,13 +41,19 @@ public class Producto {
     @Column(name = "stock_producto", nullable = false)
     private Integer stockProducto;
 
-    @Column(name = "imagen_producto")
-    private String imagenProducto;
+    // ============================
+    // IMAGEN (URL)
+    // ============================
+    @Column(name = "imagen_producto", length = 500)
+    private String imagenProducto;  // SOLO URL
 
+    // ============================
+    // FECHA Y ESTADO
+    // ============================
     @Column(name = "fecha_publicacion")
     private LocalDateTime fechaPublicacion;
 
-    @Column(name = "estado")
+    @Column(name = "estado", length = 20)
     private String estado;
 
     // ============================

@@ -11,7 +11,6 @@ import com.mercadolocalia.services.SubcategoriaService;
 
 @RestController
 @RequestMapping("/subcategorias")
-@CrossOrigin(origins = "*")
 public class SubcategoriaController {
 
     @Autowired

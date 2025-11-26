@@ -11,7 +11,6 @@ import com.mercadolocalia.services.IaService;
 
 @RestController
 @RequestMapping("/ia")
-@CrossOrigin(origins = "*")
 public class IaController {
 
     @Autowired

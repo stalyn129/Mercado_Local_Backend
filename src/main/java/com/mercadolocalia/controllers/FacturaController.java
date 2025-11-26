@@ -10,7 +10,6 @@ import com.mercadolocalia.services.FacturaService;
 
 @RestController
 @RequestMapping("/facturas")
-@CrossOrigin(origins = "*")
 public class FacturaController {
 
     @Autowired

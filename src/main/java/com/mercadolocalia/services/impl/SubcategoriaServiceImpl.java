@@ -26,17 +26,13 @@ public class SubcategoriaServiceImpl implements SubcategoriaService {
     @Override
     public SubcategoriaResponse crearSubcategoria(SubcategoriaRequest request) {
 
-        if (subcategoriaRepository.existsByNombreSubcategoria(request.getNombreSubcategoria())) {
-            throw new RuntimeException("La subcategoría ya existe");
-        }
-
         Categoria categoria = categoriaRepository.findById(request.getIdCategoria())
                 .orElseThrow(() -> new RuntimeException("Categoría no encontrada"));
 
         Subcategoria sub = new Subcategoria();
-        sub.setCategoria(categoria);
         sub.setNombreSubcategoria(request.getNombreSubcategoria());
         sub.setDescripcionSubcategoria(request.getDescripcionSubcategoria());
+        sub.setCategoria(categoria);
 
         subcategoriaRepository.save(sub);
 
@@ -45,16 +41,15 @@ public class SubcategoriaServiceImpl implements SubcategoriaService {
 
     @Override
     public SubcategoriaResponse actualizarSubcategoria(Integer id, SubcategoriaRequest request) {
-
         Subcategoria sub = subcategoriaRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Subcategoría no encontrada"));
 
         Categoria categoria = categoriaRepository.findById(request.getIdCategoria())
                 .orElseThrow(() -> new RuntimeException("Categoría no encontrada"));
 
-        sub.setCategoria(categoria);
         sub.setNombreSubcategoria(request.getNombreSubcategoria());
         sub.setDescripcionSubcategoria(request.getDescripcionSubcategoria());
+        sub.setCategoria(categoria);
 
         subcategoriaRepository.save(sub);
 
@@ -70,7 +65,6 @@ public class SubcategoriaServiceImpl implements SubcategoriaService {
     public SubcategoriaResponse obtenerSubcategoriaPorId(Integer id) {
         Subcategoria sub = subcategoriaRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Subcategoría no encontrada"));
-
         return convertir(sub);
     }
 
@@ -79,7 +73,7 @@ public class SubcategoriaServiceImpl implements SubcategoriaService {
         return subcategoriaRepository.findAll()
                 .stream()
                 .map(this::convertir)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     @Override
@@ -91,18 +85,20 @@ public class SubcategoriaServiceImpl implements SubcategoriaService {
         return subcategoriaRepository.findByCategoria(categoria)
                 .stream()
                 .map(this::convertir)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     private SubcategoriaResponse convertir(Subcategoria sub) {
-        SubcategoriaResponse res = new SubcategoriaResponse();
+        SubcategoriaResponse dto = new SubcategoriaResponse();
 
-        res.setIdSubcategoria(sub.getIdSubcategoria());
-        res.setNombreSubcategoria(sub.getNombreSubcategoria());
-        res.setDescripcionSubcategoria(sub.getDescripcionSubcategoria());
-        res.setIdCategoria(sub.getCategoria().getIdCategoria());
-        res.setNombreCategoria(sub.getCategoria().getNombreCategoria());
+        dto.setIdSubcategoria(sub.getIdSubcategoria());
+        dto.setNombreSubcategoria(sub.getNombreSubcategoria());
+        dto.setDescripcionSubcategoria(sub.getDescripcionSubcategoria());
 
-        return res;
+        dto.setIdCategoria(sub.getCategoria().getIdCategoria());
+        dto.setNombreCategoria(sub.getCategoria().getNombreCategoria());
+
+        return dto;
     }
 }
+

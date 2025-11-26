@@ -11,7 +11,6 @@ import com.mercadolocalia.services.ValoracionService;
 
 @RestController
 @RequestMapping("/valoraciones")
-@CrossOrigin(origins = "*")
 public class ValoracionController {
 
     @Autowired

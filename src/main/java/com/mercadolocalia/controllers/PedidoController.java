@@ -12,7 +12,6 @@ import com.mercadolocalia.services.PedidoService;
 
 @RestController
 @RequestMapping("/pedidos")
-@CrossOrigin(origins = "*")
 public class PedidoController {
 
     @Autowired

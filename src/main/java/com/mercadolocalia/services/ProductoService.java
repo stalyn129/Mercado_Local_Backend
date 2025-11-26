@@ -1,7 +1,6 @@
 package com.mercadolocalia.services;
 
 import java.util.List;
-
 import com.mercadolocalia.dto.ProductoRequest;
 import com.mercadolocalia.dto.ProductoResponse;
 
@@ -20,4 +19,7 @@ public interface ProductoService {
     List<ProductoResponse> listarPorSubcategoria(Integer idSubcategoria);
 
     List<ProductoResponse> listarTodos();
+
+    // 🔥 MÉTODO QUE TE FALTABA
+    ProductoResponse cambiarEstado(Integer idProducto, String estado);
 }
