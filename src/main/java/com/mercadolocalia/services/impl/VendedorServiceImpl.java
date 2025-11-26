@@ -94,7 +94,8 @@ public class VendedorServiceImpl implements VendedorService {
         Integer totalPedidos = pedidoRepository.countByVendedor(vendedor);
 
         // TOTAL PRODUCTOS
-        Integer productos = productoRepository.countByVendedor(vendedor);
+        Integer productos = productoRepository.contarDisponiblesPorVendedor(vendedorId);
+
 
         EstadisticasDTO dto = new EstadisticasDTO();
         dto.setIngresosTotales(ingresos);

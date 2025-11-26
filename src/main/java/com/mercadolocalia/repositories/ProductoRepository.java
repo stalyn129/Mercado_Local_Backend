@@ -2,6 +2,7 @@ package com.mercadolocalia.repositories;
 
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 
 import com.mercadolocalia.entities.Producto;
 import com.mercadolocalia.entities.Subcategoria;
@@ -17,4 +18,8 @@ public interface ProductoRepository extends JpaRepository<Producto, Integer> {
 
     // ✔ contar productos del vendedor
     Integer countByVendedor(Vendedor vendedor);
+    
+    @Query("SELECT COUNT(p) FROM Producto p WHERE p.vendedor.idVendedor = :id AND p.estado = 'Disponible'")
+    Integer contarDisponiblesPorVendedor(Integer id);
+
 }

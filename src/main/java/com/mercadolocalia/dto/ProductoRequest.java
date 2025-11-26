@@ -1,16 +1,20 @@
 package com.mercadolocalia.dto;
 
+import org.springframework.web.multipart.MultipartFile;
+
 public class ProductoRequest {
 
-    private Integer idVendedor;  // opcional
-    private Integer idUsuario;   // también opcional
-
+    private Integer idVendedor;
+    private Integer idUsuario;
     private Integer idSubcategoria;
+
     private String nombreProducto;
     private String descripcionProducto;
     private Double precioProducto;
     private Integer stockProducto;
-    private String imagenProducto;
+
+    // 🔥 Imagen opcional en actualización
+    private MultipartFile imagen;
 
     public Integer getIdVendedor() { return idVendedor; }
     public void setIdVendedor(Integer idVendedor) { this.idVendedor = idVendedor; }
@@ -33,6 +37,6 @@ public class ProductoRequest {
     public Integer getStockProducto() { return stockProducto; }
     public void setStockProducto(Integer stockProducto) { this.stockProducto = stockProducto; }
 
-    public String getImagenProducto() { return imagenProducto; }
-    public void setImagenProducto(String imagenProducto) { this.imagenProducto = imagenProducto; }
+    public MultipartFile getImagen() { return imagen; }
+    public void setImagen(MultipartFile imagen) { this.imagen = imagen; }
 }

@@ -1,12 +1,14 @@
 package com.mercadolocalia.services.impl;
 
+import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
 import com.mercadolocalia.dto.ProductoRequest;
 import com.mercadolocalia.dto.ProductoResponse;
 import com.mercadolocalia.entities.Producto;
@@ -22,211 +24,86 @@ import com.mercadolocalia.services.ProductoService;
 @Service
 public class ProductoServiceImpl implements ProductoService {
 
-    @Autowired
-    private ProductoRepository productoRepository;
+    @Autowired private ProductoRepository productoRepository;
+    @Autowired private VendedorRepository vendedorRepository;
+    @Autowired private UsuarioRepository usuarioRepository;
+    @Autowired private SubcategoriaRepository subcategoriaRepository;
 
-    @Autowired
-    private VendedorRepository vendedorRepository;
-
-    @Autowired
-    private UsuarioRepository usuarioRepository;
-
-    @Autowired
-    private SubcategoriaRepository subcategoriaRepository;
-
-    // =========================================================
-    // CREAR PRODUCTO
-    // =========================================================
+    // ===================== CREAR =====================
     @Override
     public ProductoResponse crearProducto(ProductoRequest request) {
-
-        validarRequestBasico(request);
-
-        Vendedor vendedor = obtenerVendedorDesdeRequest(request);
-
-        Subcategoria subcategoria = subcategoriaRepository.findById(request.getIdSubcategoria())
-                .orElseThrow(() -> new RuntimeException(
-                        "Subcategoría no encontrada con id " + request.getIdSubcategoria()));
-
         Producto p = new Producto();
-        p.setVendedor(vendedor);
-        p.setSubcategoria(subcategoria);
-        p.setNombreProducto(request.getNombreProducto());
-        p.setDescripcionProducto(request.getDescripcionProducto());
-        p.setPrecioProducto(request.getPrecioProducto());
-        p.setStockProducto(request.getStockProducto());
-        p.setImagenProducto(request.getImagenProducto());
+        asignarDatos(p, request);
         p.setFechaPublicacion(LocalDateTime.now());
         p.setEstado("Disponible");
-
+        guardarImagen(request, p);
         productoRepository.save(p);
-
         return convertir(p);
     }
 
-    // =========================================================
-    // ACTUALIZAR PRODUCTO
-    // =========================================================
+    // ===================== ACTUALIZAR 🔥 =====================
     @Override
     public ProductoResponse actualizarProducto(Integer id, ProductoRequest request) {
-
         Producto p = productoRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException(
-                        "Producto no encontrado con id " + id));
+                .orElseThrow(() -> new RuntimeException("Producto no encontrado con id " + id));
 
-        Vendedor vendedor = obtenerVendedorDesdeRequest(request);
-
-        Subcategoria subcategoria = subcategoriaRepository.findById(request.getIdSubcategoria())
-                .orElseThrow(() -> new RuntimeException(
-                        "Subcategoría no encontrada con id " + request.getIdSubcategoria()));
-
-        p.setVendedor(vendedor);
-        p.setSubcategoria(subcategoria);
-        p.setNombreProducto(request.getNombreProducto());
-        p.setDescripcionProducto(request.getDescripcionProducto());
-        p.setPrecioProducto(request.getPrecioProducto());
-        p.setStockProducto(request.getStockProducto());
-        p.setImagenProducto(request.getImagenProducto());
+        asignarDatos(p, request);
+        guardarImagen(request, p); // 🔥 cambia imagen solo si se envía
 
         productoRepository.save(p);
-
         return convertir(p);
     }
 
-    // =========================================================
-    // ELIMINAR PRODUCTO
-    // =========================================================
-    @Override
-    public void eliminarProducto(Integer id) {
-        productoRepository.deleteById(id);
-    }
+    private void asignarDatos(Producto p, ProductoRequest r) {
 
-    // =========================================================
-    // OBTENER POR ID
-    // =========================================================
-    @Override
-    public ProductoResponse obtenerPorId(Integer id) {
+        Subcategoria sub = subcategoriaRepository.findById(r.getIdSubcategoria())
+                .orElseThrow(() -> new RuntimeException("Subcategoría no existe"));
 
-        Producto p = productoRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException(
-                        "Producto no encontrado con id " + id));
+        p.setSubcategoria(sub);
+        p.setNombreProducto(r.getNombreProducto());
+        p.setDescripcionProducto(r.getDescripcionProducto());
+        p.setPrecioProducto(r.getPrecioProducto());
+        p.setStockProducto(r.getStockProducto());
 
-        return convertir(p);
-    }
-
-    // =========================================================
-    // LISTAR POR VENDEDOR
-    // =========================================================
-    @Override
-    public List<ProductoResponse> listarPorVendedor(Integer idVendedor) {
-
-        Vendedor vendedor = vendedorRepository.findById(idVendedor)
-                .orElseThrow(() -> new RuntimeException(
-                        "Vendedor no encontrado con id " + idVendedor));
-
-        return productoRepository.findByVendedor(vendedor)
-                .stream()
-                .map(this::convertir)
-                .collect(Collectors.toList());
-    }
-
-    // =========================================================
-    // LISTAR POR SUBCATEGORÍA
-    // =========================================================
-    @Override
-    public List<ProductoResponse> listarPorSubcategoria(Integer idSubcategoria) {
-
-        Subcategoria sub = subcategoriaRepository.findById(idSubcategoria)
-                .orElseThrow(() -> new RuntimeException(
-                        "Subcategoría no encontrada con id " + idSubcategoria));
-
-        return productoRepository.findBySubcategoria(sub)
-                .stream()
-                .map(this::convertir)
-                .collect(Collectors.toList());
-    }
-
-    // =========================================================
-    // LISTAR TODOS
-    // =========================================================
-    @Override
-    public List<ProductoResponse> listarTodos() {
-
-        return productoRepository.findAll()
-                .stream()
-                .map(this::convertir)
-                .collect(Collectors.toList());
-    }
-
-    // =========================================================
-    // CAMBIAR ESTADO
-    // =========================================================
-    @Override
-    public ProductoResponse cambiarEstado(Integer idProducto, String estado) {
-
-        Producto p = productoRepository.findById(idProducto)
-                .orElseThrow(() -> new RuntimeException(
-                        "Producto no encontrado con id " + idProducto));
-
-        p.setEstado(estado);
-        productoRepository.save(p);
-
-        return convertir(p);
-    }
-
-    // =========================================================
-    // VALIDACIONES
-    // =========================================================
-    private void validarRequestBasico(ProductoRequest r) {
-
-        if (r.getNombreProducto() == null || r.getNombreProducto().isBlank())
-            throw new IllegalArgumentException("El nombre del producto es obligatorio");
-
-        if (r.getPrecioProducto() == null)
-            throw new IllegalArgumentException("Debe enviar el precio");
-
-        if (r.getStockProducto() == null)
-            throw new IllegalArgumentException("Debe enviar stockProducto");
-
-        if (r.getIdSubcategoria() == null)
-            throw new IllegalArgumentException("Debe enviar idSubcategoria");
-
-        if (r.getIdVendedor() == null && r.getIdUsuario() == null)
-            throw new IllegalArgumentException("Debe enviarse idVendedor o idUsuario");
-    }
-
-    // =========================================================
-    // OBTENER VENDEDOR DESDE REQUEST
-    // =========================================================
-    private Vendedor obtenerVendedorDesdeRequest(ProductoRequest request) {
-
-        // Caso A → idVendedor
-        if (request.getIdVendedor() != null) {
-            return vendedorRepository.findById(request.getIdVendedor())
-                    .orElseThrow(() -> new RuntimeException(
-                            "Vendedor no encontrado con id " + request.getIdVendedor()));
+        // Obtener vendedor
+        if (r.getIdVendedor()!=null) {
+            Vendedor v = vendedorRepository.findById(r.getIdVendedor())
+                    .orElseThrow(()-> new RuntimeException("Vendedor no existe"));
+            p.setVendedor(v);
+        } else if(r.getIdUsuario()!=null) {
+            Usuario u = usuarioRepository.findById(r.getIdUsuario())
+                    .orElseThrow(()-> new RuntimeException("Usuario no existe"));
+            p.setVendedor(vendedorRepository.findByUsuario(u));
         }
-
-        // Caso B → idUsuario
-        Usuario usuario = usuarioRepository.findById(request.getIdUsuario())
-                .orElseThrow(() -> new RuntimeException(
-                        "Usuario no encontrado con id " + request.getIdUsuario()));
-
-        Vendedor vendedor = vendedorRepository.findByUsuario(usuario);
-
-        if (vendedor == null)
-            throw new RuntimeException("Ese usuario no tiene perfil de vendedor");
-
-        return vendedor;
     }
 
-    // =========================================================
-    // CONVERTIR A DTO RESPONSE
-    // =========================================================
+    private void guardarImagen(ProductoRequest r, Producto p) {
+        try {
+            if (r.getImagen()!=null && !r.getImagen().isEmpty()) {
+                String carpeta="uploads/";
+                File dir = new File(carpeta);
+                if(!dir.exists()) dir.mkdirs();
+
+                String nombre = System.currentTimeMillis()+"_"+r.getImagen().getOriginalFilename();
+                Files.write(Paths.get(carpeta+nombre), r.getImagen().getBytes());
+
+                p.setImagenProducto("http://localhost:8080/"+carpeta+nombre);
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Error subiendo imagen");
+        }
+    }
+
+    // ===================== OTROS =====================
+    @Override public void eliminarProducto(Integer id) { productoRepository.deleteById(id); }
+    @Override public ProductoResponse obtenerPorId(Integer id) { return convertir(productoRepository.findById(id).orElseThrow()); }
+    @Override public List<ProductoResponse> listarPorVendedor(Integer id) { return productoRepository.findByVendedor(vendedorRepository.findById(id).orElseThrow()).stream().map(this::convertir).collect(Collectors.toList()); }
+    @Override public List<ProductoResponse> listarPorSubcategoria(Integer id) { return productoRepository.findBySubcategoria(subcategoriaRepository.findById(id).orElseThrow()).stream().map(this::convertir).collect(Collectors.toList()); }
+    @Override public List<ProductoResponse> listarTodos() { return productoRepository.findAll().stream().map(this::convertir).collect(Collectors.toList()); }
+    @Override public ProductoResponse cambiarEstado(Integer id, String estado) { Producto p=productoRepository.findById(id).orElseThrow(); p.setEstado(estado); productoRepository.save(p); return convertir(p); }
+
     private ProductoResponse convertir(Producto p) {
-
         ProductoResponse r = new ProductoResponse();
-
         r.setIdProducto(p.getIdProducto());
         r.setNombreProducto(p.getNombreProducto());
         r.setDescripcionProducto(p.getDescripcionProducto());
@@ -235,17 +112,8 @@ public class ProductoServiceImpl implements ProductoService {
         r.setImagenProducto(p.getImagenProducto());
         r.setFechaPublicacion(p.getFechaPublicacion());
         r.setEstado(p.getEstado());
-
-        if (p.getVendedor() != null) {
-            r.setIdVendedor(p.getVendedor().getIdVendedor());
-            r.setNombreEmpresa(p.getVendedor().getNombreEmpresa());
-        }
-
-        if (p.getSubcategoria() != null) {
-            r.setIdSubcategoria(p.getSubcategoria().getIdSubcategoria());
-            r.setNombreSubcategoria(p.getSubcategoria().getNombreSubcategoria());
-        }
-
+        if(p.getVendedor()!=null) r.setIdVendedor(p.getVendedor().getIdVendedor());
+        if(p.getSubcategoria()!=null) r.setIdSubcategoria(p.getSubcategoria().getIdSubcategoria());
         return r;
     }
 }

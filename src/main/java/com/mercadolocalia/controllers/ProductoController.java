@@ -12,42 +12,41 @@ import com.mercadolocalia.services.ProductoService;
 @RestController
 @RequestMapping("/productos")
 @CrossOrigin(
-    origins = {
-        "http://localhost:5173",
-        "http://127.0.0.1:5173"
-    },
-    allowCredentials = "true"
+        origins = {"http://localhost:5175","http://localhost:5173"},
+        allowCredentials = "true"
 )
 public class ProductoController {
 
     @Autowired
     private ProductoService productoService;
 
+    // CREAR PRODUCTO (YA ESTABA)
     @PostMapping("/crear")
-    public ProductoResponse crearProducto(@RequestBody ProductoRequest request) {
+    public ProductoResponse crearProducto(@ModelAttribute ProductoRequest request) {
         return productoService.crearProducto(request);
     }
 
+    // OBTENER PRODUCTO POR ID
     @GetMapping("/{id}")
     public ProductoResponse obtenerProducto(@PathVariable Integer id) {
         return productoService.obtenerPorId(id);
     }
 
+    // LISTAR POR VENDEDOR
     @GetMapping("/vendedor/{idVendedor}")
     public List<ProductoResponse> listarPorVendedor(@PathVariable Integer idVendedor) {
         return productoService.listarPorVendedor(idVendedor);
     }
 
-    @GetMapping("/subcategoria/{idSubcategoria}")
-    public List<ProductoResponse> listarPorSubcategoria(@PathVariable Integer idSubcategoria) {
-        return productoService.listarPorSubcategoria(idSubcategoria);
+    // 🔥 NUEVO → EDITAR PRODUCTO CON IMAGEN OPCIONAL
+    @PutMapping("/editar/{id}")
+    public ProductoResponse actualizarProducto(
+            @PathVariable Integer id,
+            @ModelAttribute ProductoRequest request) {
+        return productoService.actualizarProducto(id, request);
     }
 
-    @GetMapping("/todos")
-    public List<ProductoResponse> listarTodos() {
-        return productoService.listarTodos();
-    }
-
+    // CAMBIAR ESTADO
     @PutMapping("/{id}/estado")
     public ProductoResponse cambiarEstado(
             @PathVariable Integer id,
@@ -60,3 +59,4 @@ public class ProductoController {
         productoService.eliminarProducto(id);
     }
 }
+
