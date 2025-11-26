@@ -20,7 +20,8 @@ public class CorsConfig {
                                 "http://localhost:5173",
                                 "http://127.0.0.1:5173",
                                 "https://*.onrender.com",
-                                "https://mercado-local-ia.onrender.com"
+                                "https://mercado-local-ia.onrender.com",
+                                "http://localhost:5175"
                         )
                         .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                         .allowedHeaders("*")
