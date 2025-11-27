@@ -57,6 +57,7 @@ public class ProductoServiceImpl implements ProductoService {
     }
 
     private void asignarDatos(Producto p, ProductoRequest r) {
+
         Subcategoria sub = subcategoriaRepository.findById(r.getIdSubcategoria())
                 .orElseThrow(() -> new RuntimeException("Subcategoría no existe"));
 
@@ -65,6 +66,9 @@ public class ProductoServiceImpl implements ProductoService {
         p.setDescripcionProducto(r.getDescripcionProducto());
         p.setPrecioProducto(r.getPrecioProducto());
         p.setStockProducto(r.getStockProducto());
+
+        // ========== 🚨 NUEVO: UNIDAD ==========
+        p.setUnidad(r.getUnidad()); // kg - unidad - litro - libra - caja
 
         if (r.getIdVendedor() != null) {
             Vendedor v = vendedorRepository.findById(r.getIdVendedor())
@@ -78,25 +82,18 @@ public class ProductoServiceImpl implements ProductoService {
         }
     }
 
+ // ================== 🔥 OPCIÓN A — IMAGEN COMO URL ==================
     private void guardarImagen(ProductoRequest r, Producto p) {
-        try {
-            if (r.getImagen() != null && !r.getImagen().isEmpty()) {
-                String carpeta="uploads/";
-                File dir = new File(carpeta);
-                if(!dir.exists()) dir.mkdirs();
 
-                String nombre = System.currentTimeMillis()+"_"+r.getImagen().getOriginalFilename();
-                Files.write(Paths.get(carpeta+nombre), r.getImagen().getBytes());
-
-                p.setImagenProducto("http://localhost:8080/"+carpeta+nombre);
-            }
-        } catch (Exception e) {
-            throw new RuntimeException("Error subiendo imagen");
+        // Si la imagen llega como URL desde Postman/React
+        if (r.getImagenProducto() != null && !r.getImagenProducto().isEmpty()) {
+            p.setImagenProducto(r.getImagenProducto());
         }
     }
 
-    // ===================== CONSULTAS BÁSICAS =====================
-    @Override 
+
+    // ================= CONSULTAS =================
+    @Override
     public ProductoResponse obtenerPorId(Integer id) {
         return productoRepository.findById(id)
                 .map(this::convertir)
@@ -104,12 +101,24 @@ public class ProductoServiceImpl implements ProductoService {
     }
 
     @Override public void eliminarProducto(Integer id) { productoRepository.deleteById(id); }
-    @Override public List<ProductoResponse> listarPorVendedor(Integer id) { return productoRepository.findByVendedor(vendedorRepository.findById(id).orElseThrow()).stream().map(this::convertir).collect(Collectors.toList()); }
-    @Override public List<ProductoResponse> listarPorSubcategoria(Integer id) { return productoRepository.findBySubcategoria(subcategoriaRepository.findById(id).orElseThrow()).stream().map(this::convertir).collect(Collectors.toList()); }
-    @Override public List<ProductoResponse> listarTodos() { return productoRepository.findAll().stream().map(this::convertir).collect(Collectors.toList()); }
-    @Override public ProductoResponse cambiarEstado(Integer id, String estado) { Producto p=productoRepository.findById(id).orElseThrow(); p.setEstado(estado); productoRepository.save(p); return convertir(p); }
+    @Override public List<ProductoResponse> listarPorVendedor(Integer id) {
+        return productoRepository.findByVendedor(vendedorRepository.findById(id).orElseThrow())
+               .stream().map(this::convertir).collect(Collectors.toList());
+    }
+    @Override public List<ProductoResponse> listarPorSubcategoria(Integer id) {
+        return productoRepository.findBySubcategoria(subcategoriaRepository.findById(id).orElseThrow())
+               .stream().map(this::convertir).collect(Collectors.toList());
+    }
+    @Override public List<ProductoResponse> listarTodos() {
+        return productoRepository.findAll().stream().map(this::convertir).collect(Collectors.toList());
+    }
+    @Override public ProductoResponse cambiarEstado(Integer id, String estado) {
+        Producto p=productoRepository.findById(id).orElseThrow();
+        p.setEstado(estado); productoRepository.save(p);
+        return convertir(p);
+    }
 
-    // ================= DETALLE COMPLETO CON VALORACIONES =================
+    // ================= DETALLE COMPLETO =================
     @Override
     public ProductoDetalleResponse obtenerDetalleProducto(Integer idProducto) {
 
@@ -118,7 +127,7 @@ public class ProductoServiceImpl implements ProductoService {
 
         ProductoDetalleResponse r = new ProductoDetalleResponse();
 
-        // DATOS BÁSICOS
+        // BÁSICO
         r.setIdProducto(p.getIdProducto());
         r.setNombreProducto(p.getNombreProducto());
         r.setDescripcionProducto(p.getDescripcionProducto());
@@ -127,6 +136,7 @@ public class ProductoServiceImpl implements ProductoService {
         r.setImagenProducto(p.getImagenProducto());
         r.setFechaPublicacion(p.getFechaPublicacion());
         r.setEstado(p.getEstado());
+        r.setUnidad(p.getUnidad()); // ⚠ envío a frontend
 
         // SUBCATEGORÍA + CATEGORÍA
         if (p.getSubcategoria()!=null) {
@@ -152,14 +162,13 @@ public class ProductoServiceImpl implements ProductoService {
             }
         }
 
-        // ========== VALORACIONES ==========
-        if(p.getValoraciones() != null && !p.getValoraciones().isEmpty()){
+        // VALORACIONES
+        if(p.getValoraciones()!=null && !p.getValoraciones().isEmpty()){
 
             r.setPromedioValoracion(
                     p.getValoraciones().stream()
                             .mapToDouble(v -> v.getCalificacion())
-                            .average().orElse(0.0)
-            );
+                            .average().orElse(0.0));
 
             r.setTotalValoraciones(p.getValoraciones().size());
 
@@ -171,17 +180,10 @@ public class ProductoServiceImpl implements ProductoService {
                         vr.setComentario(v.getComentario());
                         vr.setFechaValoracion(v.getFechaValoracion());
 
-                        if(v.getProducto()!=null){
-                            vr.setIdProducto(v.getProducto().getIdProducto());
-                            vr.setNombreProducto(v.getProducto().getNombreProducto());
-                        }
-
                         if(v.getConsumidor()!=null && v.getConsumidor().getUsuario()!=null){
                             vr.setIdConsumidor(v.getConsumidor().getIdConsumidor());
-                            vr.setNombreConsumidor(
-                                    v.getConsumidor().getUsuario().getNombre()+" "+
-                                            v.getConsumidor().getUsuario().getApellido()
-                            );
+                            vr.setNombreConsumidor(v.getConsumidor().getUsuario().getNombre()+" "+
+                                                  v.getConsumidor().getUsuario().getApellido());
                         }
                         return vr;
                     }).toList()
@@ -196,7 +198,7 @@ public class ProductoServiceImpl implements ProductoService {
         return r;
     }
 
-    // =================== Convertir a Response normal ===================
+    // ================= CONVERTIR RESPONSE GENERAL =================
     private ProductoResponse convertir(Producto p) {
         ProductoResponse r = new ProductoResponse();
         r.setIdProducto(p.getIdProducto());
@@ -204,6 +206,7 @@ public class ProductoServiceImpl implements ProductoService {
         r.setDescripcionProducto(p.getDescripcionProducto());
         r.setPrecioProducto(p.getPrecioProducto());
         r.setStockProducto(p.getStockProducto());
+        r.setUnidad(p.getUnidad()); // ⚠ también lo envío aquí
         r.setImagenProducto(p.getImagenProducto());
         r.setFechaPublicacion(p.getFechaPublicacion());
         r.setEstado(p.getEstado());

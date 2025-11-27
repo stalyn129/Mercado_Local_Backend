@@ -19,9 +19,10 @@ public class ProductoController {
 
     // ==================== CREAR PRODUCTO ====================
     @PostMapping("/crear")
-    public ProductoResponse crearProducto(ProductoRequest request) {
+    public ProductoResponse crearProducto(@RequestBody ProductoRequest request) {  
         return productoService.crearProducto(request);
     }
+
 
     // ==================== EDITAR PRODUCTO ====================
     @PutMapping("/editar/{id}")

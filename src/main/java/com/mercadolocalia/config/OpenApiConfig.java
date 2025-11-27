@@ -12,24 +12,21 @@ import io.swagger.v3.oas.models.security.SecurityScheme;
 @Configuration
 public class OpenApiConfig {
 
-    @Bean
-    public OpenAPI customOpenAPI() {
+	@Bean
+	public OpenAPI customOpenAPI() {
+	    return new OpenAPI()
+	            .info(new Info()
+	                    .title("MercadoLocalIA API")
+	                    .version("1.0")
+	                    .description("Documentación Oficial"))
+	            .addSecurityItem(new SecurityRequirement().addList("BearerAuth"))
+	            .components(new Components()
+	                    .addSecuritySchemes("BearerAuth",
+	                            new SecurityScheme()
+	                                    .name("Authorization")
+	                                    .type(SecurityScheme.Type.HTTP)
+	                                    .scheme("bearer")
+	                                    .bearerFormat("JWT")));
+	}
 
-        return new OpenAPI()
-                .info(new Info()
-                        .title("MercadoLocalIA API")
-                        .version("1.0")
-                        .description("Documentación de la API"))
-                .addSecurityItem(new SecurityRequirement()
-                        .addList("BearerAuth"))
-                .components(new Components()
-                        .addSecuritySchemes("BearerAuth",
-                                new SecurityScheme()
-                                        .name("Authorization")
-                                        .type(SecurityScheme.Type.HTTP)
-                                        .scheme("bearer")
-                                        .bearerFormat("JWT")
-                        )
-                );
-    }
 }

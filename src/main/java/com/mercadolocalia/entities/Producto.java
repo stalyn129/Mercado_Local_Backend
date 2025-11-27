@@ -42,11 +42,15 @@ public class Producto {
     @Column(name = "stock_producto", nullable = false)
     private Integer stockProducto;
 
+    // ========= NUEVO ⚠ — Unidad de medida (Kg/Lb/Litro/Unidad/etc) ========== 
+    @Column(name = "unidad", length = 20, nullable = false)
+    private String unidad; // <-- MUY IMPORTANTE PARA TU FRONTEND
+
     // ============================
     // IMAGEN (URL)
     // ============================
     @Column(name = "imagen_producto", length = 500)
-    private String imagenProducto;  // SOLO URL
+    private String imagenProducto;
 
     // ============================
     // FECHA Y ESTADO
@@ -57,96 +61,49 @@ public class Producto {
     @Column(name = "estado", length = 20)
     private String estado;
 
+    // ============================
+    // VALORACIONES
+    // ============================
     @OneToMany(mappedBy = "producto", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Valoracion> valoraciones;
 
     public List<Valoracion> getValoraciones() { return valoraciones; }
+    public void setValoraciones(List<Valoracion> valoraciones) { this.valoraciones = valoraciones; }
 
-    public void setValoraciones(List<Valoracion> valoraciones) { 
-    	this.valoraciones = valoraciones; 
-    }
-    
     // ============================
-    // GETTERS & SETTERS
+    // GETTERS & SETTERS COMPLETOS
     // ============================
 
-    public Integer getIdProducto() {
-        return idProducto;
-    }
+    public Integer getIdProducto() { return idProducto; }
+    public void setIdProducto(Integer idProducto) { this.idProducto = idProducto; }
 
-    public void setIdProducto(Integer idProducto) {
-        this.idProducto = idProducto;
-    }
+    public Vendedor getVendedor() { return vendedor; }
+    public void setVendedor(Vendedor vendedor) { this.vendedor = vendedor; }
 
-    public Vendedor getVendedor() {
-        return vendedor;
-    }
+    public Subcategoria getSubcategoria() { return subcategoria; }
+    public void setSubcategoria(Subcategoria subcategoria) { this.subcategoria = subcategoria; }
 
-    public void setVendedor(Vendedor vendedor) {
-        this.vendedor = vendedor;
-    }
+    public String getNombreProducto() { return nombreProducto; }
+    public void setNombreProducto(String nombreProducto) { this.nombreProducto = nombreProducto; }
 
-    public Subcategoria getSubcategoria() {
-        return subcategoria;
-    }
+    public String getDescripcionProducto() { return descripcionProducto; }
+    public void setDescripcionProducto(String descripcionProducto) { this.descripcionProducto = descripcionProducto; }
 
-    public void setSubcategoria(Subcategoria subcategoria) {
-        this.subcategoria = subcategoria;
-    }
+    public Double getPrecioProducto() { return precioProducto; }
+    public void setPrecioProducto(Double precioProducto) { this.precioProducto = precioProducto; }
 
-    public String getNombreProducto() {
-        return nombreProducto;
-    }
+    public Integer getStockProducto() { return stockProducto; }
+    public void setStockProducto(Integer stockProducto) { this.stockProducto = stockProducto; }
 
-    public void setNombreProducto(String nombreProducto) {
-        this.nombreProducto = nombreProducto;
-    }
+    public String getUnidad() { return unidad; }
+    public void setUnidad(String unidad) { this.unidad = unidad; }
 
-    public String getDescripcionProducto() {
-        return descripcionProducto;
-    }
+    public String getImagenProducto() { return imagenProducto; }
+    public void setImagenProducto(String imagenProducto) { this.imagenProducto = imagenProducto; }
 
-    public void setDescripcionProducto(String descripcionProducto) {
-        this.descripcionProducto = descripcionProducto;
-    }
+    public LocalDateTime getFechaPublicacion() { return fechaPublicacion; }
+    public void setFechaPublicacion(LocalDateTime fechaPublicacion) { this.fechaPublicacion = fechaPublicacion; }
 
-    public Double getPrecioProducto() {
-        return precioProducto;
-    }
-
-    public void setPrecioProducto(Double precioProducto) {
-        this.precioProducto = precioProducto;
-    }
-
-    public Integer getStockProducto() {
-        return stockProducto;
-    }
-
-    public void setStockProducto(Integer stockProducto) {
-        this.stockProducto = stockProducto;
-    }
-
-    public String getImagenProducto() {
-        return imagenProducto;
-    }
-
-    public void setImagenProducto(String imagenProducto) {
-        this.imagenProducto = imagenProducto;
-    }
-
-    public LocalDateTime getFechaPublicacion() {
-        return fechaPublicacion;
-    }
-
-    public void setFechaPublicacion(LocalDateTime fechaPublicacion) {
-        this.fechaPublicacion = fechaPublicacion;
-    }
-
-    public String getEstado() {
-        return estado;
-    }
-
-    public void setEstado(String estado) {
-        this.estado = estado;
-    }
+    public String getEstado() { return estado; }
+    public void setEstado(String estado) { this.estado = estado; }
 }

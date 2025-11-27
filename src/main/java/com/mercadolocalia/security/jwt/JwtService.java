@@ -24,25 +24,21 @@ public class JwtService {
     @Value("${app.jwt.expiration}")
     private long expirationMs;
 
-    // Convertir string a llave HMAC segura
     private Key getSigningKey() {
         return Keys.hmacShaKeyFor(secretKey.getBytes());
     }
 
-    // ========================
-    // GENERAR TOKEN
-    // ========================
+    // ======================== GENERAR TOKEN ========================
     public String generarToken(Usuario usuario) {
 
         Map<String, Object> claims = new HashMap<>();
-        claims.put("rol", usuario.getRol().getNombreRol());
+        claims.put("rol", usuario.getRol().getNombreRol());   // 👈 NECESARIO PARA VENDEDOR
         claims.put("idUsuario", usuario.getIdUsuario());
 
         return crearToken(claims, usuario.getCorreo());
     }
 
     private String crearToken(Map<String, Object> claims, String subject) {
-
         return Jwts.builder()
                 .setClaims(claims)
                 .setSubject(subject)
@@ -52,9 +48,7 @@ public class JwtService {
                 .compact();
     }
 
-    // ========================
-    // OBTENER CLAIMS
-    // ========================
+    // ======================== OBTENER CLAIMS ========================
     private Claims obtenerTodosLosClaims(String token) {
         return Jwts.parserBuilder()
                 .setSigningKey(getSigningKey())
@@ -67,19 +61,19 @@ public class JwtService {
         return obtenerTodosLosClaims(token).getSubject();
     }
 
-    public Date obtenerFechaExpiracion(String token) {
-        return obtenerTodosLosClaims(token).getExpiration();
+    // ======================== EXTRAER VALOR (🔥 LO QUE FALTABA) ========================
+    public <T> T extraerValor(String token, String clave, Class<T> tipo) {
+        Object value = obtenerTodosLosClaims(token).get(clave);
+        return tipo.cast(value);
     }
 
-    public boolean tokenExpirado(String token) {
-        return obtenerFechaExpiracion(token).before(new Date());
-    }
-
-    // ========================
-    // VALIDAR TOKEN
-    // ========================
+    // ======================== VALIDAR TOKEN ========================
     public boolean validarToken(String token, Usuario usuario) {
         final String correo = obtenerCorreoDesdeToken(token);
         return (correo.equals(usuario.getCorreo()) && !tokenExpirado(token));
+    }
+
+    private boolean tokenExpirado(String token) {
+        return obtenerTodosLosClaims(token).getExpiration().before(new Date());
     }
 }

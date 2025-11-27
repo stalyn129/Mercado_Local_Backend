@@ -1,7 +1,5 @@
 package com.mercadolocalia.dto;
 
-import org.springframework.web.multipart.MultipartFile;
-
 public class ProductoRequest {
 
     private Integer idVendedor;
@@ -13,30 +11,28 @@ public class ProductoRequest {
     private Double precioProducto;
     private Integer stockProducto;
 
-    // 🔥 Imagen opcional en actualización
-    private MultipartFile imagen;
+    private String unidad; // <--- mantiene tu campo
+    private String imagenProducto; // ← ya no MultipartFile porque viene URL
 
     public Integer getIdVendedor() { return idVendedor; }
     public void setIdVendedor(Integer idVendedor) { this.idVendedor = idVendedor; }
-
     public Integer getIdUsuario() { return idUsuario; }
     public void setIdUsuario(Integer idUsuario) { this.idUsuario = idUsuario; }
-
     public Integer getIdSubcategoria() { return idSubcategoria; }
     public void setIdSubcategoria(Integer idSubcategoria) { this.idSubcategoria = idSubcategoria; }
 
     public String getNombreProducto() { return nombreProducto; }
     public void setNombreProducto(String nombreProducto) { this.nombreProducto = nombreProducto; }
-
     public String getDescripcionProducto() { return descripcionProducto; }
     public void setDescripcionProducto(String descripcionProducto) { this.descripcionProducto = descripcionProducto; }
-
     public Double getPrecioProducto() { return precioProducto; }
     public void setPrecioProducto(Double precioProducto) { this.precioProducto = precioProducto; }
-
     public Integer getStockProducto() { return stockProducto; }
     public void setStockProducto(Integer stockProducto) { this.stockProducto = stockProducto; }
 
-    public MultipartFile getImagen() { return imagen; }
-    public void setImagen(MultipartFile imagen) { this.imagen = imagen; }
+    public String getUnidad() { return unidad; }
+    public void setUnidad(String unidad) { this.unidad = unidad; }
+
+    public String getImagenProducto() { return imagenProducto; }
+    public void setImagenProducto(String imagenProducto) { this.imagenProducto = imagenProducto; }
 }

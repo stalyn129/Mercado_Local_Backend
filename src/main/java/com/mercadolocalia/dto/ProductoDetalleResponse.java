@@ -12,6 +12,10 @@ public class ProductoDetalleResponse {
     private Double precioProducto;
     private Integer stockProducto;
     private String imagenProducto;
+    
+    // NUEVO ⚠ Para mostrar en frontend → $precio / unidad
+    private String unidad;  // kg | unidad | litro | libra | docena
+    
     private LocalDateTime fechaPublicacion;
     private String estado;
 
@@ -24,156 +28,69 @@ public class ProductoDetalleResponse {
     // ========= VENDEDOR =========
     private Integer idVendedor;
     private String nombreEmpresa;
-    private String nombreVendedor; // nombre + apellido del usuario del vendedor
+    private String nombreVendedor; // nombre + apellido
 
     // ========= VALORACIONES =========
     private List<ValoracionResponse> valoraciones;
     private Double promedioValoracion;
     private Integer totalValoraciones;
 
-    // ======= GETTERS & SETTERS =======
+    // ========= GETTERS & SETTERS =========
 
-    public Integer getIdProducto() {
-        return idProducto;
-    }
+    public Integer getIdProducto() { return idProducto; }
+    public void setIdProducto(Integer idProducto) { this.idProducto = idProducto; }
 
-    public void setIdProducto(Integer idProducto) {
-        this.idProducto = idProducto;
-    }
+    public String getNombreProducto() { return nombreProducto; }
+    public void setNombreProducto(String nombreProducto) { this.nombreProducto = nombreProducto; }
 
-    public String getNombreProducto() {
-        return nombreProducto;
-    }
+    public String getDescripcionProducto() { return descripcionProducto; }
+    public void setDescripcionProducto(String descripcionProducto) { this.descripcionProducto = descripcionProducto; }
 
-    public void setNombreProducto(String nombreProducto) {
-        this.nombreProducto = nombreProducto;
-    }
+    public Double getPrecioProducto() { return precioProducto; }
+    public void setPrecioProducto(Double precioProducto) { this.precioProducto = precioProducto; }
 
-    public String getDescripcionProducto() {
-        return descripcionProducto;
-    }
+    public Integer getStockProducto() { return stockProducto; }
+    public void setStockProducto(Integer stockProducto) { this.stockProducto = stockProducto; }
 
-    public void setDescripcionProducto(String descripcionProducto) {
-        this.descripcionProducto = descripcionProducto;
-    }
+    public String getImagenProducto() { return imagenProducto; }
+    public void setImagenProducto(String imagenProducto) { this.imagenProducto = imagenProducto; }
 
-    public Double getPrecioProducto() {
-        return precioProducto;
-    }
+    public String getUnidad() { return unidad; }
+    public void setUnidad(String unidad) { this.unidad = unidad; }
 
-    public void setPrecioProducto(Double precioProducto) {
-        this.precioProducto = precioProducto;
-    }
+    public LocalDateTime getFechaPublicacion() { return fechaPublicacion; }
+    public void setFechaPublicacion(LocalDateTime fechaPublicacion) { this.fechaPublicacion = fechaPublicacion; }
 
-    public Integer getStockProducto() {
-        return stockProducto;
-    }
+    public String getEstado() { return estado; }
+    public void setEstado(String estado) { this.estado = estado; }
 
-    public void setStockProducto(Integer stockProducto) {
-        this.stockProducto = stockProducto;
-    }
+    public Integer getIdCategoria() { return idCategoria; }
+    public void setIdCategoria(Integer idCategoria) { this.idCategoria = idCategoria; }
 
-    public String getImagenProducto() {
-        return imagenProducto;
-    }
+    public String getNombreCategoria() { return nombreCategoria; }
+    public void setNombreCategoria(String nombreCategoria) { this.nombreCategoria = nombreCategoria; }
 
-    public void setImagenProducto(String imagenProducto) {
-        this.imagenProducto = imagenProducto;
-    }
+    public Integer getIdSubcategoria() { return idSubcategoria; }
+    public void setIdSubcategoria(Integer idSubcategoria) { this.idSubcategoria = idSubcategoria; }
 
-    public LocalDateTime getFechaPublicacion() {
-        return fechaPublicacion;
-    }
+    public String getNombreSubcategoria() { return nombreSubcategoria; }
+    public void setNombreSubcategoria(String nombreSubcategoria) { this.nombreSubcategoria = nombreSubcategoria; }
 
-    public void setFechaPublicacion(LocalDateTime fechaPublicacion) {
-        this.fechaPublicacion = fechaPublicacion;
-    }
+    public Integer getIdVendedor() { return idVendedor; }
+    public void setIdVendedor(Integer idVendedor) { this.idVendedor = idVendedor; }
 
-    public String getEstado() {
-        return estado;
-    }
+    public String getNombreEmpresa() { return nombreEmpresa; }
+    public void setNombreEmpresa(String nombreEmpresa) { this.nombreEmpresa = nombreEmpresa; }
 
-    public void setEstado(String estado) {
-        this.estado = estado;
-    }
+    public String getNombreVendedor() { return nombreVendedor; }
+    public void setNombreVendedor(String nombreVendedor) { this.nombreVendedor = nombreVendedor; }
 
-    public Integer getIdCategoria() {
-        return idCategoria;
-    }
+    public List<ValoracionResponse> getValoraciones() { return valoraciones; }
+    public void setValoraciones(List<ValoracionResponse> valoraciones) { this.valoraciones = valoraciones; }
 
-    public void setIdCategoria(Integer idCategoria) {
-        this.idCategoria = idCategoria;
-    }
+    public Double getPromedioValoracion() { return promedioValoracion; }
+    public void setPromedioValoracion(Double promedioValoracion) { this.promedioValoracion = promedioValoracion; }
 
-    public String getNombreCategoria() {
-        return nombreCategoria;
-    }
-
-    public void setNombreCategoria(String nombreCategoria) {
-        this.nombreCategoria = nombreCategoria;
-    }
-
-    public Integer getIdSubcategoria() {
-        return idSubcategoria;
-    }
-
-    public void setIdSubcategoria(Integer idSubcategoria) {
-        this.idSubcategoria = idSubcategoria;
-    }
-
-    public String getNombreSubcategoria() {
-        return nombreSubcategoria;
-    }
-
-    public void setNombreSubcategoria(String nombreSubcategoria) {
-        this.nombreSubcategoria = nombreSubcategoria;
-    }
-
-    public Integer getIdVendedor() {
-        return idVendedor;
-    }
-
-    public void setIdVendedor(Integer idVendedor) {
-        this.idVendedor = idVendedor;
-    }
-
-    public String getNombreEmpresa() {
-        return nombreEmpresa;
-    }
-
-    public void setNombreEmpresa(String nombreEmpresa) {
-        this.nombreEmpresa = nombreEmpresa;
-    }
-
-    public String getNombreVendedor() {
-        return nombreVendedor;
-    }
-
-    public void setNombreVendedor(String nombreVendedor) {
-        this.nombreVendedor = nombreVendedor;
-    }
-
-    public List<ValoracionResponse> getValoraciones() {
-        return valoraciones;
-    }
-
-    public void setValoraciones(List<ValoracionResponse> valoraciones) {
-        this.valoraciones = valoraciones;
-    }
-
-    public Double getPromedioValoracion() {
-        return promedioValoracion;
-    }
-
-    public void setPromedioValoracion(Double promedioValoracion) {
-        this.promedioValoracion = promedioValoracion;
-    }
-
-    public Integer getTotalValoraciones() {
-        return totalValoraciones;
-    }
-
-    public void setTotalValoraciones(Integer totalValoraciones) {
-        this.totalValoraciones = totalValoraciones;
-    }
+    public Integer getTotalValoraciones() { return totalValoraciones; }
+    public void setTotalValoraciones(Integer totalValoraciones) { this.totalValoraciones = totalValoraciones; }
 }

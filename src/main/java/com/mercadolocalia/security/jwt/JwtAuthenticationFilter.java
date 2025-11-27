@@ -1,9 +1,11 @@
 package com.mercadolocalia.security.jwt;
 
 import java.io.IOException;
+import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
@@ -37,17 +39,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         // ================== PERMITIMOS RUTAS PUBLICAS ==================
         if (path.startsWith("/auth") ||
             path.startsWith("/uploads") ||
-            path.startsWith("/productos") && request.getMethod().equals("GET") ||
-            path.startsWith("/categorias") && request.getMethod().equals("GET") ||
-            path.startsWith("/subcategorias") && request.getMethod().equals("GET")) {
+            (path.startsWith("/productos") && request.getMethod().equals("GET")) ||
+            (path.startsWith("/categorias") && request.getMethod().equals("GET")) ||
+            (path.startsWith("/subcategorias") && request.getMethod().equals("GET"))) {
 
-            filterChain.doFilter(request, response); 
+            filterChain.doFilter(request, response);
             return;
         }
         // ===============================================================
 
         String authHeader = request.getHeader("Authorization");
-        String token = null; 
+        String token = null;
         String correo = null;
 
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
@@ -62,10 +64,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             if (usuario != null && jwtService.validarToken(token, usuario)) {
 
+                // >>> 🔥 Recuperamos rol desde el token
+                String rol = jwtService.extraerValor(token, "rol", String.class);
+
+                // >>> 🔥 Ahora Spring reconoce VENDEDOR
                 UsernamePasswordAuthenticationToken authToken =
                         new UsernamePasswordAuthenticationToken(
-                                userDetails, null, userDetails.getAuthorities()
+                                userDetails,
+                                null,
+                                List.of(new SimpleGrantedAuthority(rol)) // ⬅ YA TIENES PERMISO
                         );
+                
                 authToken.setDetails(
                         new WebAuthenticationDetailsSource().buildDetails(request)
                 );

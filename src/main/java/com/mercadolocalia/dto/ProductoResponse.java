@@ -19,12 +19,11 @@ public class ProductoResponse {
     private Integer idSubcategoria;
     private String nombreSubcategoria;
 
-    // 🔥 NUEVO
     private Integer idCategoria;
     private String nombreCategoria;
 
-
-    // ================= GETTERS & SETTERS =================
+    // ⭐ Importante para mostrar precio/unidad
+    private String unidad;
 
     public Integer getIdProducto() { return idProducto; }
     public void setIdProducto(Integer idProducto) { this.idProducto = idProducto; }
@@ -67,4 +66,7 @@ public class ProductoResponse {
 
     public String getNombreCategoria() { return nombreCategoria; }
     public void setNombreCategoria(String nombreCategoria) { this.nombreCategoria = nombreCategoria; }
+
+    public String getUnidad() { return unidad; }
+    public void setUnidad(String unidad) { this.unidad = unidad; }
 }
