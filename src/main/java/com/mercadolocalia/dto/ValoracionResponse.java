@@ -5,14 +5,17 @@ import java.time.LocalDateTime;
 public class ValoracionResponse {
 
     private Integer idValoracion;
-    private Integer idProducto;
-    private String nombreProducto;
     private Integer calificacion;
     private String comentario;
     private LocalDateTime fechaValoracion;
 
+    private Integer idProducto;
+    private String nombreProducto;
+
     private Integer idConsumidor;
     private String nombreConsumidor;
+
+    // ========== GETTERS & SETTERS ==========
 
     public Integer getIdValoracion() {
         return idValoracion;
@@ -20,22 +23,6 @@ public class ValoracionResponse {
 
     public void setIdValoracion(Integer idValoracion) {
         this.idValoracion = idValoracion;
-    }
-
-    public Integer getIdProducto() {
-        return idProducto;
-    }
-
-    public void setIdProducto(Integer idProducto) {
-        this.idProducto = idProducto;
-    }
-
-    public String getNombreProducto() {
-        return nombreProducto;
-    }
-
-    public void setNombreProducto(String nombreProducto) {
-        this.nombreProducto = nombreProducto;
     }
 
     public Integer getCalificacion() {
@@ -60,6 +47,22 @@ public class ValoracionResponse {
 
     public void setFechaValoracion(LocalDateTime fechaValoracion) {
         this.fechaValoracion = fechaValoracion;
+    }
+
+    public Integer getIdProducto() {
+        return idProducto;
+    }
+
+    public void setIdProducto(Integer idProducto) {
+        this.idProducto = idProducto;
+    }
+
+    public String getNombreProducto() {
+        return nombreProducto;
+    }
+
+    public void setNombreProducto(String nombreProducto) {
+        this.nombreProducto = nombreProducto;
     }
 
     public Integer getIdConsumidor() {

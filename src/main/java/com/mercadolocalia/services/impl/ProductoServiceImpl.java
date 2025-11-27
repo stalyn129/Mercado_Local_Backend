@@ -9,8 +9,11 @@ import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
 import com.mercadolocalia.dto.ProductoRequest;
 import com.mercadolocalia.dto.ProductoResponse;
+import com.mercadolocalia.dto.ProductoDetalleResponse;
+import com.mercadolocalia.dto.ValoracionResponse;
 import com.mercadolocalia.entities.Producto;
 import com.mercadolocalia.entities.Subcategoria;
 import com.mercadolocalia.entities.Usuario;
@@ -41,21 +44,19 @@ public class ProductoServiceImpl implements ProductoService {
         return convertir(p);
     }
 
-    // ===================== ACTUALIZAR 🔥 =====================
+    // ===================== ACTUALIZAR =====================
     @Override
     public ProductoResponse actualizarProducto(Integer id, ProductoRequest request) {
         Producto p = productoRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Producto no encontrado con id " + id));
 
         asignarDatos(p, request);
-        guardarImagen(request, p); // 🔥 cambia imagen solo si se envía
-
+        guardarImagen(request, p);
         productoRepository.save(p);
         return convertir(p);
     }
 
     private void asignarDatos(Producto p, ProductoRequest r) {
-
         Subcategoria sub = subcategoriaRepository.findById(r.getIdSubcategoria())
                 .orElseThrow(() -> new RuntimeException("Subcategoría no existe"));
 
@@ -65,21 +66,21 @@ public class ProductoServiceImpl implements ProductoService {
         p.setPrecioProducto(r.getPrecioProducto());
         p.setStockProducto(r.getStockProducto());
 
-        // Obtener vendedor
-        if (r.getIdVendedor()!=null) {
+        if (r.getIdVendedor() != null) {
             Vendedor v = vendedorRepository.findById(r.getIdVendedor())
-                    .orElseThrow(()-> new RuntimeException("Vendedor no existe"));
+                    .orElseThrow(() -> new RuntimeException("Vendedor no existe"));
             p.setVendedor(v);
-        } else if(r.getIdUsuario()!=null) {
+
+        } else if (r.getIdUsuario() != null) {
             Usuario u = usuarioRepository.findById(r.getIdUsuario())
-                    .orElseThrow(()-> new RuntimeException("Usuario no existe"));
+                    .orElseThrow(() -> new RuntimeException("Usuario no existe"));
             p.setVendedor(vendedorRepository.findByUsuario(u));
         }
     }
 
     private void guardarImagen(ProductoRequest r, Producto p) {
         try {
-            if (r.getImagen()!=null && !r.getImagen().isEmpty()) {
+            if (r.getImagen() != null && !r.getImagen().isEmpty()) {
                 String carpeta="uploads/";
                 File dir = new File(carpeta);
                 if(!dir.exists()) dir.mkdirs();
@@ -94,14 +95,108 @@ public class ProductoServiceImpl implements ProductoService {
         }
     }
 
-    // ===================== OTROS =====================
+    // ===================== CONSULTAS BÁSICAS =====================
+    @Override 
+    public ProductoResponse obtenerPorId(Integer id) {
+        return productoRepository.findById(id)
+                .map(this::convertir)
+                .orElseThrow(() -> new RuntimeException("❌ Producto no encontrado con id " + id));
+    }
+
     @Override public void eliminarProducto(Integer id) { productoRepository.deleteById(id); }
-    @Override public ProductoResponse obtenerPorId(Integer id) { return convertir(productoRepository.findById(id).orElseThrow()); }
     @Override public List<ProductoResponse> listarPorVendedor(Integer id) { return productoRepository.findByVendedor(vendedorRepository.findById(id).orElseThrow()).stream().map(this::convertir).collect(Collectors.toList()); }
     @Override public List<ProductoResponse> listarPorSubcategoria(Integer id) { return productoRepository.findBySubcategoria(subcategoriaRepository.findById(id).orElseThrow()).stream().map(this::convertir).collect(Collectors.toList()); }
     @Override public List<ProductoResponse> listarTodos() { return productoRepository.findAll().stream().map(this::convertir).collect(Collectors.toList()); }
     @Override public ProductoResponse cambiarEstado(Integer id, String estado) { Producto p=productoRepository.findById(id).orElseThrow(); p.setEstado(estado); productoRepository.save(p); return convertir(p); }
 
+    // ================= DETALLE COMPLETO CON VALORACIONES =================
+    @Override
+    public ProductoDetalleResponse obtenerDetalleProducto(Integer idProducto) {
+
+        Producto p = productoRepository.findById(idProducto)
+                .orElseThrow(() -> new RuntimeException("Producto no encontrado"));
+
+        ProductoDetalleResponse r = new ProductoDetalleResponse();
+
+        // DATOS BÁSICOS
+        r.setIdProducto(p.getIdProducto());
+        r.setNombreProducto(p.getNombreProducto());
+        r.setDescripcionProducto(p.getDescripcionProducto());
+        r.setPrecioProducto(p.getPrecioProducto());
+        r.setStockProducto(p.getStockProducto());
+        r.setImagenProducto(p.getImagenProducto());
+        r.setFechaPublicacion(p.getFechaPublicacion());
+        r.setEstado(p.getEstado());
+
+        // SUBCATEGORÍA + CATEGORÍA
+        if (p.getSubcategoria()!=null) {
+            r.setIdSubcategoria(p.getSubcategoria().getIdSubcategoria());
+            r.setNombreSubcategoria(p.getSubcategoria().getNombreSubcategoria());
+
+            if (p.getSubcategoria().getCategoria()!=null){
+                r.setIdCategoria(p.getSubcategoria().getCategoria().getIdCategoria());
+                r.setNombreCategoria(p.getSubcategoria().getCategoria().getNombreCategoria());
+            }
+        }
+
+        // VENDEDOR
+        if (p.getVendedor()!=null){
+            r.setIdVendedor(p.getVendedor().getIdVendedor());
+            r.setNombreEmpresa(p.getVendedor().getNombreEmpresa());
+
+            if(p.getVendedor().getUsuario()!=null){
+                r.setNombreVendedor(
+                        p.getVendedor().getUsuario().getNombre()+" "+
+                        p.getVendedor().getUsuario().getApellido()
+                );
+            }
+        }
+
+        // ========== VALORACIONES ==========
+        if(p.getValoraciones() != null && !p.getValoraciones().isEmpty()){
+
+            r.setPromedioValoracion(
+                    p.getValoraciones().stream()
+                            .mapToDouble(v -> v.getCalificacion())
+                            .average().orElse(0.0)
+            );
+
+            r.setTotalValoraciones(p.getValoraciones().size());
+
+            r.setValoraciones(
+                    p.getValoraciones().stream().map(v -> {
+                        ValoracionResponse vr = new ValoracionResponse();
+                        vr.setIdValoracion(v.getIdValoracion());
+                        vr.setCalificacion(v.getCalificacion());
+                        vr.setComentario(v.getComentario());
+                        vr.setFechaValoracion(v.getFechaValoracion());
+
+                        if(v.getProducto()!=null){
+                            vr.setIdProducto(v.getProducto().getIdProducto());
+                            vr.setNombreProducto(v.getProducto().getNombreProducto());
+                        }
+
+                        if(v.getConsumidor()!=null && v.getConsumidor().getUsuario()!=null){
+                            vr.setIdConsumidor(v.getConsumidor().getIdConsumidor());
+                            vr.setNombreConsumidor(
+                                    v.getConsumidor().getUsuario().getNombre()+" "+
+                                            v.getConsumidor().getUsuario().getApellido()
+                            );
+                        }
+                        return vr;
+                    }).toList()
+            );
+
+        } else {
+            r.setPromedioValoracion(0.0);
+            r.setTotalValoraciones(0);
+            r.setValoraciones(List.of());
+        }
+
+        return r;
+    }
+
+    // =================== Convertir a Response normal ===================
     private ProductoResponse convertir(Producto p) {
         ProductoResponse r = new ProductoResponse();
         r.setIdProducto(p.getIdProducto());
@@ -112,8 +207,21 @@ public class ProductoServiceImpl implements ProductoService {
         r.setImagenProducto(p.getImagenProducto());
         r.setFechaPublicacion(p.getFechaPublicacion());
         r.setEstado(p.getEstado());
-        if(p.getVendedor()!=null) r.setIdVendedor(p.getVendedor().getIdVendedor());
-        if(p.getSubcategoria()!=null) r.setIdSubcategoria(p.getSubcategoria().getIdSubcategoria());
+
+        if (p.getVendedor()!=null) {
+            r.setIdVendedor(p.getVendedor().getIdVendedor());
+            r.setNombreEmpresa(p.getVendedor().getNombreEmpresa());
+        }
+
+        if (p.getSubcategoria()!=null) {
+            r.setIdSubcategoria(p.getSubcategoria().getIdSubcategoria());
+            r.setNombreSubcategoria(p.getSubcategoria().getNombreSubcategoria());
+            if(p.getSubcategoria().getCategoria()!=null) {
+                r.setIdCategoria(p.getSubcategoria().getCategoria().getIdCategoria());
+                r.setNombreCategoria(p.getSubcategoria().getCategoria().getNombreCategoria());
+            }
+        }
+
         return r;
     }
 }

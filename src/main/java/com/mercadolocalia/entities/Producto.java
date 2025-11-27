@@ -2,6 +2,7 @@ package com.mercadolocalia.entities;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
 @Table(name = "productos")
@@ -56,6 +57,15 @@ public class Producto {
     @Column(name = "estado", length = 20)
     private String estado;
 
+    @OneToMany(mappedBy = "producto", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<Valoracion> valoraciones;
+
+    public List<Valoracion> getValoraciones() { return valoraciones; }
+
+    public void setValoraciones(List<Valoracion> valoraciones) { 
+    	this.valoraciones = valoraciones; 
+    }
+    
     // ============================
     // GETTERS & SETTERS
     // ============================

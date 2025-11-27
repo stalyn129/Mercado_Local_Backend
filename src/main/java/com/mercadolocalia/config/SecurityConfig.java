@@ -1,9 +1,15 @@
 package com.mercadolocalia.config;
 
 import com.mercadolocalia.security.jwt.JwtAuthenticationFilter;
+
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
+
+
 
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.Customizer;
@@ -32,81 +38,46 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
         http
-            // Permitir CORS con tu configuración de WebMvcConfigurer
-            .cors(Customizer.withDefaults())
-
-            // ❌ Desactivar CSRF porque usas API REST
+            .cors(cors -> cors.configurationSource(request -> {
+                var config = new org.springframework.web.cors.CorsConfiguration();
+                config.setAllowedOrigins(List.of("http://localhost:5173", "http://localhost:5175"));
+                config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+                config.setAllowedHeaders(List.of("Authorization", "Content-Type"));
+                config.setAllowCredentials(true);
+                return config;
+            }))
             .csrf(csrf -> csrf.disable())
-
-            // JWT = Sin sesiones
-            .sessionManagement(session ->
-                session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-            )
+            .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
             .authorizeHttpRequests(auth -> auth
 
-                /* ========================================
-                   🟩 SWAGGER (esto permite que cargue)
-                   ======================================== */
-                .requestMatchers(
-                        "/swagger-ui/**",
-                        "/swagger-ui.html",
-                        "/v3/api-docs/**",
-                        "/api-docs/**"
-                ).permitAll()
+            	    // ==================== PUBLICO =====================
+            	    .requestMatchers("/auth/**", "/uploads/**").permitAll()
+            	    .requestMatchers("/categorias/listar", "/subcategorias/listar").permitAll()
 
-                /* ========================================
-                   🟩 ARCHIVOS (imágenes estáticas)
-                   ======================================== */
-                .requestMatchers("/uploads/**").permitAll()
+            	    // 🔥 PERMITIR TODOS LOS GET DE PRODUCTOS (lista + detalle + imágenes)
+            	    .requestMatchers(HttpMethod.GET, "/productos/**").permitAll()
 
-                /* ========================================
-                   🟩 RUTAS PÚBLICAS
-                   ======================================== */
-                .requestMatchers("/auth/**").permitAll()
-                .requestMatchers("/categorias/**").permitAll()
-                .requestMatchers("/subcategorias/**").permitAll()
-                .requestMatchers("/productos/todos").permitAll()
-                .requestMatchers("/productos/subcategoria/**").permitAll()
+            	    // ==================== VENDEDOR =====================
+            	    .requestMatchers(
+            	        "/productos/crear",
+            	        "/productos/editar/**",
+            	        "/productos/eliminar/**",
+            	        "/productos/estado/**",
+            	        "/productos/vendedor/**"
+            	    ).hasAuthority("VENDEDOR")
 
-                /* ========================================
-                   🟦 PRODUCTOS — SOLO VENDEDORES
-                   ======================================== */
-                .requestMatchers(
-                        "/productos/crear",
-                        "/productos/actualizar/**",
-                        "/productos/eliminar/**",
-                        "/productos/estado/**",
-                        "/productos/vendedor/**"
-                ).hasAuthority("VENDEDOR")
+            	    // ==================== ADMIN =====================
+            	    .requestMatchers("/admin/**").hasAuthority("ADMIN")
 
-                /* ========================================
-                   🟧 ADMINISTRADOR
-                   ======================================== */
-                .requestMatchers("/admin/**").hasAuthority("ADMIN")
+            	    // ==================== CONSUMIDOR =====================
+            	    .requestMatchers("/consumidor/**").hasAuthority("CONSUMIDOR")
 
-                /* ========================================
-                   🟪 VENDEDOR
-                   ======================================== */
-                .requestMatchers("/vendedor/**").hasAuthority("VENDEDOR")
+            	    .anyRequest().authenticated()
+            	)
 
-                /* ========================================
-                   🟨 CONSUMIDOR
-                   ======================================== */
-                .requestMatchers("/consumidor/**").hasAuthority("CONSUMIDOR")
 
-                /* ========================================
-                   🟫 RUTAS PRIVADAS
-                   ======================================== */
-                .requestMatchers("/usuarios/**").authenticated()
-
-                /* ========================================
-                   🔐 Cualquier otra ruta requiere token
-                   ======================================== */
-                .anyRequest().authenticated()
-            )
-
-            // Filtro JWT antes del filtro de Spring Security
+            // 🔥 EXCLUSIÓN: JWT NO SE EJECUTA PARA RUTAS PUBLICAS
             .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
