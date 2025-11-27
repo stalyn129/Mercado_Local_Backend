@@ -4,10 +4,7 @@ import java.util.Collections;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.userdetails.User;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.core.userdetails.*;
 import org.springframework.stereotype.Service;
 
 import com.mercadolocalia.entities.Usuario;
@@ -19,7 +16,11 @@ public class UserDetailsServiceImpl implements UserDetailsService {
     @Autowired
     private UsuarioRepository usuarioRepository;
 
+<<<<<<< Updated upstream
     // Guarda el usuario cargado para validarlo con el JWT
+=======
+    // Guarda la entidad cargada en caso de usarla desde filtros
+>>>>>>> Stashed changes
     private Usuario usuarioEntidad;
 
     @Override
@@ -30,6 +31,7 @@ public class UserDetailsServiceImpl implements UserDetailsService {
                         new UsernameNotFoundException("❌ Usuario no encontrado con correo: " + correo)
                 );
 
+<<<<<<< Updated upstream
         // Guardamos para obtenerlo en validaciones del Token
         this.usuarioEntidad = usuario;
 
@@ -44,6 +46,23 @@ public class UserDetailsServiceImpl implements UserDetailsService {
     }
 
     // 🟢 Permite acceder al usuario cargado desde filtros JWT si lo necesitas
+=======
+        // Guardamos para echar mano desde el filtro si se necesita
+        this.usuarioEntidad = usuario;
+
+        // 🔥 Convertimos el rol a un formato válido para Spring Security
+        //  ADMIN → ROLE_ADMIN
+        String rolSpring = "ROLE_" + usuario.getRol().getNombreRol().toUpperCase();
+
+        return new User(
+                usuario.getCorreo(),                      // usuario
+                usuario.getContrasena(),                  // password Hash BCrypt
+                Collections.singleton(new SimpleGrantedAuthority(rolSpring)) // autoridad válida
+        );
+    }
+
+    // 🔥 Extra accesible si luego quieres obtener info del usuario autenticado
+>>>>>>> Stashed changes
     public Usuario getUsuarioEntidad() {
         return usuarioEntidad;
     }
