@@ -16,11 +16,7 @@ public class UserDetailsServiceImpl implements UserDetailsService {
     @Autowired
     private UsuarioRepository usuarioRepository;
 
-<<<<<<< Updated upstream
-    // Guarda el usuario cargado para validarlo con el JWT
-=======
     // Guarda la entidad cargada en caso de usarla desde filtros
->>>>>>> Stashed changes
     private Usuario usuarioEntidad;
 
     @Override
@@ -31,22 +27,6 @@ public class UserDetailsServiceImpl implements UserDetailsService {
                         new UsernameNotFoundException("❌ Usuario no encontrado con correo: " + correo)
                 );
 
-<<<<<<< Updated upstream
-        // Guardamos para obtenerlo en validaciones del Token
-        this.usuarioEntidad = usuario;
-
-        // IMPORTANTE: Usamos ROLE_ para que Security lo reconozca
-        String rolSpring = "ROLE_" + usuario.getRol().getNombreRol().toUpperCase();
-
-        return new User(
-                usuario.getCorreo(),              // username usado para login
-                usuario.getContrasena(),          // password
-                Collections.singleton(new SimpleGrantedAuthority(rolSpring)) // autoridad
-        );
-    }
-
-    // 🟢 Permite acceder al usuario cargado desde filtros JWT si lo necesitas
-=======
         // Guardamos para echar mano desde el filtro si se necesita
         this.usuarioEntidad = usuario;
 
@@ -62,7 +42,6 @@ public class UserDetailsServiceImpl implements UserDetailsService {
     }
 
     // 🔥 Extra accesible si luego quieres obtener info del usuario autenticado
->>>>>>> Stashed changes
     public Usuario getUsuarioEntidad() {
         return usuarioEntidad;
     }

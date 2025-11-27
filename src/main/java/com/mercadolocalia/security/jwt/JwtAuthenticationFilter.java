@@ -67,29 +67,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             if (usuario != null && jwtService.validarToken(token, usuario)) {
 
-<<<<<<< Updated upstream
-                // >>> 🔥 Recuperamos rol desde el token
-                String rol = jwtService.extraerValor(token, "rol", String.class);
-
-                // >>> 🔥 Ahora Spring reconoce VENDEDOR
-=======
                 // Extrae rol desde el token JWT
                 String rol = jwtService.extraerValor(token, "rol", String.class);
 
->>>>>>> Stashed changes
                 UsernamePasswordAuthenticationToken authToken =
                         new UsernamePasswordAuthenticationToken(
                                 userDetails,
                                 null,
-<<<<<<< Updated upstream
-                                List.of(new SimpleGrantedAuthority(rol)) // ⬅ YA TIENES PERMISO
-                        );
-                
-=======
                                 List.of(new SimpleGrantedAuthority("ROLE_" + rol)) // 🔥 RECONOCIDO POR SECURITY
                         );
 
->>>>>>> Stashed changes
                 authToken.setDetails(
                         new WebAuthenticationDetailsSource().buildDetails(request)
                 );
