@@ -28,7 +28,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @Autowired private UserDetailsServiceImpl userDetailsService;
     @Autowired private UsuarioRepository usuarioRepository;
 
-
     @Override
     protected void doFilterInternal(HttpServletRequest request,
                                    HttpServletResponse response,
@@ -37,7 +36,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         String path = request.getRequestURI();
 
-        // ================== PERMITIR RUTAS PÚBLICAS ==================
+        // ================== PERMITIMOS RUTAS PUBLICAS ==================
         if (path.startsWith("/auth") ||
             path.startsWith("/uploads") ||
             (path.startsWith("/productos") && request.getMethod().equals("GET")) ||
@@ -47,8 +46,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             filterChain.doFilter(request, response);
             return;
         }
-        // =============================================================
-
+        // ===============================================================
 
         String authHeader = request.getHeader("Authorization");
         String token = null;
@@ -59,7 +57,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             correo = jwtService.obtenerCorreoDesdeToken(token);
         }
 
-
         if (correo != null && SecurityContextHolder.getContext().getAuthentication() == null) {
 
             UserDetails userDetails = userDetailsService.loadUserByUsername(correo);
@@ -67,16 +64,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             if (usuario != null && jwtService.validarToken(token, usuario)) {
 
-                // Extrae rol desde el token JWT
+                // >>> 🔥 Recuperamos rol desde el token
                 String rol = jwtService.extraerValor(token, "rol", String.class);
 
+                // >>> 🔥 Ahora Spring reconoce VENDEDOR
                 UsernamePasswordAuthenticationToken authToken =
                         new UsernamePasswordAuthenticationToken(
                                 userDetails,
                                 null,
-                                List.of(new SimpleGrantedAuthority("ROLE_" + rol)) // 🔥 RECONOCIDO POR SECURITY
+                                List.of(new SimpleGrantedAuthority(rol)) // ⬅ YA TIENES PERMISO
                         );
-
+                
                 authToken.setDetails(
                         new WebAuthenticationDetailsSource().buildDetails(request)
                 );

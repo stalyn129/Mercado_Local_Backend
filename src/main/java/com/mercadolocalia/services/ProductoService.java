@@ -23,4 +23,8 @@ public interface ProductoService {
     // ====================== DETALLE COMPLETO ======================
     // 🔥 CON VALORACIONES Y PROMEDIO
     ProductoDetalleResponse obtenerDetalleProducto(Integer idProducto);
+    
+    // ====================== TOP 20 PARA HOME ======================
+    List<ProductoResponse> listarTop20Mejores();
+
 }

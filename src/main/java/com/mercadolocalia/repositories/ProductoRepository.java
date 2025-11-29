@@ -22,4 +22,14 @@ public interface ProductoRepository extends JpaRepository<Producto, Integer> {
     @Query("SELECT COUNT(p) FROM Producto p WHERE p.vendedor.idVendedor = :id AND p.estado = 'Disponible'")
     Integer contarDisponiblesPorVendedor(Integer id);
 
+    // ==================== 🔥 TOP 20 MEJORES PRODUCTOS ====================
+    @Query("""
+        SELECT p 
+        FROM Producto p 
+        LEFT JOIN p.valoraciones v
+        GROUP BY p.idProducto
+        ORDER BY AVG(v.calificacion) DESC, COUNT(v) DESC
+    """)
+    List<Producto> findTop20Mejores(org.springframework.data.domain.Pageable pageable);
+
 }

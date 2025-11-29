@@ -73,4 +73,11 @@ public class ProductoController {
     public ProductoDetalleResponse obtenerDetalle(@PathVariable Integer id) {
         return productoService.obtenerDetalleProducto(id);
     }
+    
+    // ==================== TOP 20 MEJORES PARA HOME ====================
+    @GetMapping("/top")
+    public List<ProductoResponse> listarTop20Mejores() {
+        return productoService.listarTop20Mejores();
+    }
+
 }

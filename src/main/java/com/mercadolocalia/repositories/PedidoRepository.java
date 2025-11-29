@@ -25,13 +25,4 @@ public interface PedidoRepository extends JpaRepository<Pedido, Integer> {
     // ✔ Sumar ingresos del vendedor
     @Query("SELECT SUM(p.total) FROM Pedido p WHERE p.vendedor.idVendedor = :vendedorId")
     Double sumarIngresosPorVendedor(Integer vendedorId);
-    
-    @Query("SELECT SUM(p.total) FROM Pedido p")
-    Double sumTotalVentas();
-
-    @Query("SELECT SUM(p.total) FROM Pedido p WHERE MONTH(p.fechaPedido)=MONTH(CURRENT_DATE)")
-    Double sumVentasMesActual();
-
-    List<Pedido> findTop5ByOrderByIdPedidoDesc();
-
 }

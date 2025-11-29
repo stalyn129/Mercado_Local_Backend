@@ -227,4 +227,17 @@ public class ProductoServiceImpl implements ProductoService {
 
         return r;
     }
+    
+    
+    // ================= OBTENER LOS 20 MEJORES TOP =================
+    @Override
+    public List<ProductoResponse> listarTop20Mejores() {
+        var pageable = org.springframework.data.domain.PageRequest.of(0, 20);
+
+        return productoRepository.findTop20Mejores(pageable)
+                .stream()
+                .map(this::convertir)
+                .collect(Collectors.toList());
+    }
+
 }
