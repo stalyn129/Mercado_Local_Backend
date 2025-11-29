@@ -65,10 +65,14 @@ public class SecurityConfig {
 	                // ========= Admin =========
 	                .requestMatchers("/admin/**").hasAuthority("ADMIN")
 
-	                // ========= Consumidor =========
+	             // ========= Consumidor =========
 	                .requestMatchers("/consumidor/**").hasAuthority("CONSUMIDOR")
+	                .requestMatchers(HttpMethod.POST, "/valoraciones/crear").hasAuthority("CONSUMIDOR")
+	                .requestMatchers(HttpMethod.GET, "/valoraciones/**").permitAll()
+	                .requestMatchers(HttpMethod.POST, "/favoritos/agregar").hasAuthority("CONSUMIDOR")
 
 	                .anyRequest().authenticated()
+
 	        )
 
 	        // JWT
