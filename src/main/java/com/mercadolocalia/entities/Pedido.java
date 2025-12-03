@@ -2,6 +2,8 @@ package com.mercadolocalia.entities;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "pedidos")
@@ -37,8 +39,26 @@ public class Pedido {
 
     @Column(name = "metodo_pago")
     private String metodoPago;
+    
+    @Column(nullable = true)
+    private String comprobanteUrl;
+
+    @Column(nullable = true)
+    private String datosTarjeta;
+    
 
     // GETTERS & SETTERS
+    
+    @OneToMany(mappedBy = "pedido", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<DetallePedido> detalles = new ArrayList<>();
+
+    public List<DetallePedido> getDetalles() {
+        return detalles;
+    }
+
+    public void setDetalles(List<DetallePedido> detalles) {
+        this.detalles = detalles;
+    }
 
     public Integer getIdPedido() {
         return idPedido;
@@ -111,4 +131,21 @@ public class Pedido {
     public void setMetodoPago(String metodoPago) {
         this.metodoPago = metodoPago;
     }
+    
+    public String getComprobanteUrl() {
+        return comprobanteUrl;
+    }
+
+    public void setComprobanteUrl(String comprobanteUrl) {
+        this.comprobanteUrl = comprobanteUrl;
+    }
+
+    public String getDatosTarjeta() {
+        return datosTarjeta;
+    }
+
+    public void setDatosTarjeta(String datosTarjeta) {
+        this.datosTarjeta = datosTarjeta;
+    }
+
 }

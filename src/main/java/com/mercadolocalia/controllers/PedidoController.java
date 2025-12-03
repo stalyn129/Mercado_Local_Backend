@@ -3,8 +3,11 @@ package com.mercadolocalia.controllers;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import com.mercadolocalia.dto.PedidoCarritoRequest;
 import com.mercadolocalia.dto.PedidoRequest;
 import com.mercadolocalia.entities.Pedido;
 import com.mercadolocalia.entities.DetallePedido;
@@ -72,17 +75,26 @@ public class PedidoController {
 	public Pedido comprarAhora(@RequestBody PedidoRequest request) {
 		return pedidoService.comprarAhora(request);
 	}
+
 	// ===============================================
 	// FINALIZAR COMPRA
 	// ===============================================
-	@PutMapping("/finalizar/{idPedido}")
-	public Pedido finalizarPedido(
-	        @PathVariable Integer idPedido,
-	        @RequestParam String metodoPago
-	) {
-	    return pedidoService.finalizarPedido(idPedido, metodoPago);
+	@PostMapping(value = "/finalizar/{idPedido}", consumes = "multipart/form-data")
+	public Pedido finalizarPedido(@PathVariable Integer idPedido, @RequestParam String metodoPago,
+			@RequestParam(required = false) MultipartFile comprobante,
+			@RequestParam(required = false) String numTarjeta, @RequestParam(required = false) String fechaTarjeta,
+			@RequestParam(required = false) String cvv, @RequestParam(required = false) String titular) {
+		return pedidoService.finalizarPedido(idPedido, metodoPago, comprobante, numTarjeta, fechaTarjeta, cvv, titular);
 	}
 
+	// ===============================================
+	// CARRITO
+	// ===============================================
+	
+	@PostMapping("/carrito")
+	public Pedido crearDesdeCarrito(@RequestBody PedidoCarritoRequest request) {
+	    return pedidoService.crearPedidoDesdeCarrito(request);
+	}
 
 
 }

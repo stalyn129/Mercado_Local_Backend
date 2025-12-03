@@ -1,13 +1,17 @@
 package com.mercadolocalia.services.impl;
 
+import java.io.File;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.mercadolocalia.dto.DetallePedidoAddRequest;
+import com.mercadolocalia.dto.PedidoCarritoRequest;
 import com.mercadolocalia.dto.PedidoRequest;
 import com.mercadolocalia.entities.Consumidor;
 import com.mercadolocalia.entities.DetallePedido;
@@ -20,6 +24,8 @@ import com.mercadolocalia.repositories.PedidoRepository;
 import com.mercadolocalia.repositories.ProductoRepository;
 import com.mercadolocalia.repositories.VendedorRepository;
 import com.mercadolocalia.services.PedidoService;
+
+import jakarta.transaction.Transactional;
 
 @Service
 public class PedidoServiceImpl implements PedidoService {
@@ -240,16 +246,142 @@ public class PedidoServiceImpl implements PedidoService {
     // ============================================================
     
     @Override
-    public Pedido finalizarPedido(Integer idPedido, String metodoPago) {
+    public Pedido finalizarPedido(
+            Integer idPedido,
+            String metodoPago,
+            MultipartFile comprobante,
+            String numTarjeta,
+            String fechaTarjeta,
+            String cvv,
+            String titular
+    ) {
 
         Pedido pedido = pedidoRepository.findById(idPedido)
-            .orElseThrow(() -> new RuntimeException("Pedido no encontrado"));
+                .orElseThrow(() -> new RuntimeException("Pedido no encontrado"));
 
         pedido.setMetodoPago(metodoPago);
-        pedido.setEstadoPedido("COMPLETADO");
+
+        // ============================
+        //   EFECTIVO
+        // ============================
+        if (metodoPago.equalsIgnoreCase("EFECTIVO")) {
+            pedido.setEstadoPedido("COMPLETADO");
+            return pedidoRepository.save(pedido);
+        }
+
+        // ============================
+        //   TRANSFERENCIA
+        // ============================
+        if (metodoPago.equalsIgnoreCase("TRANSFERENCIA")) {
+
+            if (comprobante == null || comprobante.isEmpty()) {
+                throw new RuntimeException("Debe subir comprobante.");
+            }
+
+            try {
+                String carpeta = "uploads/comprobantes/";
+                File carpetaDestino = new File(carpeta);
+
+                if (!carpetaDestino.exists()) carpetaDestino.mkdirs();
+
+                String nombreArchivo = System.currentTimeMillis() + "_" + comprobante.getOriginalFilename();
+                File destino = new File(carpeta + nombreArchivo);
+
+                comprobante.transferTo(destino);
+
+                pedido.setComprobanteUrl("/" + carpeta + nombreArchivo);
+                pedido.setEstadoPedido("PENDIENTE_VERIFICACION");
+
+            } catch (Exception e) {
+                throw new RuntimeException("Error al guardar comprobante: " + e.getMessage());
+            }
+
+            return pedidoRepository.save(pedido);
+        }
+
+        // ============================
+        //   TARJETA
+        // ============================
+        if (metodoPago.equalsIgnoreCase("TARJETA")) {
+
+            if (numTarjeta == null || numTarjeta.length() < 16)
+                throw new RuntimeException("Número de tarjeta inválido");
+
+            if (cvv == null || cvv.length() < 3)
+                throw new RuntimeException("CVV inválido");
+
+            if (fechaTarjeta == null)
+                throw new RuntimeException("Fecha inválida");
+
+            if (titular == null || titular.length() < 3)
+                throw new RuntimeException("Nombre inválido");
+
+            // Guardar seguro
+            String ultimos4 = numTarjeta.substring(numTarjeta.length() - 4);
+            pedido.setDatosTarjeta("**** **** **** " + ultimos4);
+
+            pedido.setEstadoPedido("COMPLETADO");
+        }
+
+        return pedidoRepository.save(pedido);
+    }
+    
+    @Override
+    public Pedido crearPedidoDesdeCarrito(PedidoCarritoRequest request) {
+
+        Consumidor consumidor = consumidorRepository.findById(request.getIdConsumidor())
+                .orElseThrow(() -> new RuntimeException("Consumidor no encontrado"));
+
+        Vendedor vendedor = vendedorRepository.findById(request.getIdVendedor())
+                .orElseThrow(() -> new RuntimeException("Vendedor no encontrado"));
+
+        Pedido pedido = new Pedido();
+        pedido.setConsumidor(consumidor);
+        pedido.setVendedor(vendedor);
+        pedido.setFechaPedido(LocalDateTime.now());
+        pedido.setEstadoPedido("Pendiente");
+        pedido.setMetodoPago("SIN_ASIGNAR");
+
+        pedidoRepository.save(pedido);
+
+        double subtotal = 0;
+
+        for (PedidoCarritoRequest.DetalleProducto item : request.getDetalles()) {
+
+            Producto producto = productoRepository.findById(item.getIdProducto())
+                    .orElseThrow(() -> new RuntimeException("Producto no encontrado"));
+
+            if (producto.getStockProducto() < item.getCantidad()) {
+                throw new RuntimeException("Stock insuficiente para " + producto.getNombreProducto());
+            }
+
+            producto.setStockProducto(producto.getStockProducto() - item.getCantidad());
+            productoRepository.save(producto);
+
+            double precio = producto.getPrecioProducto();
+            double subDet = precio * item.getCantidad();
+
+            DetallePedido det = new DetallePedido();
+            det.setPedido(pedido);
+            det.setProducto(producto);
+            det.setCantidad(item.getCantidad());
+            det.setPrecioUnitario(precio);
+            det.setSubtotal(subDet);
+
+            detallePedidoRepository.save(det);
+
+            subtotal += subDet;
+        }
+
+        double iva = subtotal * 0.12;
+        double total = subtotal + iva;
+
+        pedido.setSubtotal(subtotal);
+        pedido.setIva(iva);
+        pedido.setTotal(total);
 
         return pedidoRepository.save(pedido);
     }
 
-    
+
 }

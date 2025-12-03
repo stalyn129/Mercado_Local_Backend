@@ -2,6 +2,9 @@ package com.mercadolocalia.services;
 
 import java.util.List;
 
+import org.springframework.web.multipart.MultipartFile;
+
+import com.mercadolocalia.dto.PedidoCarritoRequest;
 import com.mercadolocalia.dto.PedidoRequest;
 import com.mercadolocalia.entities.Pedido;
 import com.mercadolocalia.entities.DetallePedido;
@@ -22,6 +25,17 @@ public interface PedidoService {
     
     Pedido comprarAhora(PedidoRequest request);
     
-    Pedido finalizarPedido(Integer idPedido, String metodoPago);
+    Pedido finalizarPedido(
+    	    Integer idPedido,
+    	    String metodoPago,
+    	    MultipartFile comprobante,
+    	    String numTarjeta,
+    	    String fechaTarjeta,
+    	    String cvv,
+    	    String titular
+    	);
+    
+    Pedido crearPedidoDesdeCarrito(PedidoCarritoRequest request);
+
 
 }
