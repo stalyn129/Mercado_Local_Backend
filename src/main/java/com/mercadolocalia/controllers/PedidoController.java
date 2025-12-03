@@ -14,55 +14,75 @@ import com.mercadolocalia.services.PedidoService;
 @RequestMapping("/pedidos")
 public class PedidoController {
 
-    @Autowired
-    private PedidoService pedidoService;
+	@Autowired
+	private PedidoService pedidoService;
 
-    // ============================================================
-    // CREAR PEDIDO COMPLETO
-    // ============================================================
-    @PostMapping("/crear")
-    public Pedido crearPedido(@RequestBody PedidoRequest request) {
-        return pedidoService.crearPedido(request);
-    }
+	// ============================================================
+	// CREAR PEDIDO COMPLETO
+	// ============================================================
+	@PostMapping("/crear")
+	public Pedido crearPedido(@RequestBody PedidoRequest request) {
+		return pedidoService.crearPedido(request);
+	}
 
-    // ============================================================
-    // OBTENER PEDIDO POR ID
-    // ============================================================
-    @GetMapping("/{id}")
-    public Pedido obtenerPedido(@PathVariable Integer id) {
-        return pedidoService.obtenerPedidoPorId(id);
-    }
+	// ============================================================
+	// OBTENER PEDIDO POR ID
+	// ============================================================
+	@GetMapping("/{id}")
+	public Pedido obtenerPedido(@PathVariable Integer id) {
+		return pedidoService.obtenerPedidoPorId(id);
+	}
 
-    // ============================================================
-    // LISTAR PEDIDOS POR CONSUMIDOR
-    // ============================================================
-    @GetMapping("/consumidor/{idConsumidor}")
-    public List<Pedido> listarPorConsumidor(@PathVariable Integer idConsumidor) {
-        return pedidoService.listarPedidosPorConsumidor(idConsumidor);
-    }
+	// ============================================================
+	// LISTAR PEDIDOS POR CONSUMIDOR
+	// ============================================================
+	@GetMapping("/consumidor/{idConsumidor}")
+	public List<Pedido> listarPorConsumidor(@PathVariable Integer idConsumidor) {
+		return pedidoService.listarPedidosPorConsumidor(idConsumidor);
+	}
 
-    // ============================================================
-    // LISTAR PEDIDOS POR VENDEDOR
-    // ============================================================
-    @GetMapping("/vendedor/{idVendedor}")
-    public List<Pedido> listarPorVendedor(@PathVariable Integer idVendedor) {
-        return pedidoService.listarPedidosPorVendedor(idVendedor);
-    }
+	// ============================================================
+	// LISTAR PEDIDOS POR VENDEDOR
+	// ============================================================
+	@GetMapping("/vendedor/{idVendedor}")
+	public List<Pedido> listarPorVendedor(@PathVariable Integer idVendedor) {
+		return pedidoService.listarPedidosPorVendedor(idVendedor);
+	}
 
-    // ============================================================
-    // LISTAR DETALLES DE UN PEDIDO
-    // ============================================================
-    @GetMapping("/{idPedido}/detalles")
-    public List<DetallePedido> listarDetalles(@PathVariable Integer idPedido) {
-        return pedidoService.listarDetalles(idPedido);
-    }
+	// ============================================================
+	// LISTAR DETALLES DE UN PEDIDO
+	// ============================================================
+	@GetMapping("/{idPedido}/detalles")
+	public List<DetallePedido> listarDetalles(@PathVariable Integer idPedido) {
+		return pedidoService.listarDetalles(idPedido);
+	}
 
-    // ============================================================
-    // CAMBIAR ESTADO DEL PEDIDO
-    // ============================================================
-    @PutMapping("/estado/{idPedido}")
-    public Pedido cambiarEstado(@PathVariable Integer idPedido,
-                                @RequestParam String estado) {
-        return pedidoService.cambiarEstado(idPedido, estado);
-    }
+	// ============================================================
+	// CAMBIAR ESTADO DEL PEDIDO
+	// ============================================================
+	@PutMapping("/estado/{idPedido}")
+	public Pedido cambiarEstado(@PathVariable Integer idPedido, @RequestParam String estado) {
+		return pedidoService.cambiarEstado(idPedido, estado);
+	}
+
+	// ============================================================
+	// COMPRAR AHORA (1 SOLO PRODUCTO)
+	// ============================================================
+	@PostMapping("/comprar-ahora")
+	public Pedido comprarAhora(@RequestBody PedidoRequest request) {
+		return pedidoService.comprarAhora(request);
+	}
+	// ===============================================
+	// FINALIZAR COMPRA
+	// ===============================================
+	@PutMapping("/finalizar/{idPedido}")
+	public Pedido finalizarPedido(
+	        @PathVariable Integer idPedido,
+	        @RequestParam String metodoPago
+	) {
+	    return pedidoService.finalizarPedido(idPedido, metodoPago);
+	}
+
+
+
 }

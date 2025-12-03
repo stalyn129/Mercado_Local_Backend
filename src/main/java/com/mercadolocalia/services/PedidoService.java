@@ -19,4 +19,9 @@ public interface PedidoService {
     List<DetallePedido> listarDetalles(Integer idPedido);
 
     Pedido cambiarEstado(Integer idPedido, String nuevoEstado);
+    
+    Pedido comprarAhora(PedidoRequest request);
+    
+    Pedido finalizarPedido(Integer idPedido, String metodoPago);
+
 }

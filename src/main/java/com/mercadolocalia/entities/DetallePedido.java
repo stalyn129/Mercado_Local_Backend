@@ -1,6 +1,8 @@
 package com.mercadolocalia.entities;
 
 import jakarta.persistence.*;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 @Entity
 @Table(name = "detalles_pedido")
@@ -13,10 +15,16 @@ public class DetallePedido {
 
     @ManyToOne
     @JoinColumn(name = "id_pedido", nullable = false)
+    @JsonIgnore   // 🔥 Para evitar bucle infinito Pedido -> Detalles -> Pedido...
     private Pedido pedido;
 
     @ManyToOne
     @JoinColumn(name = "id_producto", nullable = false)
+    @JsonIgnoreProperties({
+        "subcategoria",      // 🔥 Evita el problema del HibernateProxy
+        "vendedor",
+        "valoraciones"       // No son necesarias en el detalle del pedido
+    })
     private Producto producto;
 
     @Column(name = "cantidad", nullable = false)
@@ -28,7 +36,7 @@ public class DetallePedido {
     @Column(name = "subtotal")
     private Double subtotal;
 
-    // GETTERS & SETTERS
+    // ================== GETTERS & SETTERS ==================
 
     public Integer getIdDetalle() {
         return idDetalle;

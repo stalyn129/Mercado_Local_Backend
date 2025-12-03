@@ -39,13 +39,20 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         // ================== PERMITIMOS RUTAS PUBLICAS ==================
         if (path.startsWith("/auth") ||
             path.startsWith("/uploads") ||
+            path.startsWith("/swagger-ui") ||
+            path.startsWith("/v3/api-docs") ||
+            path.startsWith("/api-docs") ||
+            
             (path.startsWith("/productos") && request.getMethod().equals("GET")) ||
             (path.startsWith("/categorias") && request.getMethod().equals("GET")) ||
-            (path.startsWith("/subcategorias") && request.getMethod().equals("GET"))) {
-
+            (path.startsWith("/subcategorias") && request.getMethod().equals("GET"))
+            
+        ) {
             filterChain.doFilter(request, response);
             return;
         }
+
+
         // ===============================================================
 
         String authHeader = request.getHeader("Authorization");

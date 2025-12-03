@@ -71,6 +71,15 @@ public class SecurityConfig {
 	                .requestMatchers(HttpMethod.GET, "/valoraciones/**").permitAll()
 	                .requestMatchers(HttpMethod.POST, "/favoritos/agregar").hasAuthority("CONSUMIDOR")
 
+	             // ========= Pedidos =========
+	                .requestMatchers(HttpMethod.POST, "/pedidos/comprar-ahora").hasAuthority("CONSUMIDOR")
+	                .requestMatchers(HttpMethod.GET, "/pedidos/**").hasAuthority("CONSUMIDOR")
+	                
+	             //========== Finalizar Compra=======
+	                .requestMatchers(HttpMethod.PUT, "/pedidos/finalizar/**").hasAuthority("CONSUMIDOR")
+
+
+
 	                .anyRequest().authenticated()
 
 	        )
