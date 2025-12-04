@@ -70,6 +70,10 @@ public class SecurityConfig {
 	                .requestMatchers(HttpMethod.POST, "/valoraciones/crear").hasAuthority("CONSUMIDOR")
 	                .requestMatchers(HttpMethod.GET, "/valoraciones/**").permitAll()
 	                .requestMatchers(HttpMethod.POST, "/favoritos/agregar").hasAuthority("CONSUMIDOR")
+	             // Listar favoritos (solo consumidor autenticado)
+	                .requestMatchers(HttpMethod.GET, "/favoritos/listar/**").hasAuthority("CONSUMIDOR")
+
+	                
 	             // ========= Pedidos =========
 
 	             // FIRST — Finalizar compra

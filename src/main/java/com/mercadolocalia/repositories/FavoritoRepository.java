@@ -12,3 +12,4 @@ public interface FavoritoRepository extends JpaRepository<Favorito, Integer> {
 
     List<Favorito> findByConsumidorIdConsumidor(Integer idConsumidor);
 }
+

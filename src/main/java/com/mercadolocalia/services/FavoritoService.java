@@ -1,15 +1,13 @@
 package com.mercadolocalia.services;
 
 import java.util.List;
-
-import com.mercadolocalia.entities.Favorito;
+import com.mercadolocalia.dto.FavoritoListDTO;
 
 public interface FavoritoService {
 
     String agregarFavorito(Integer idConsumidor, Integer idProducto);
 
-    List<Favorito> listarFavoritos(Integer idConsumidor);
+    List<FavoritoListDTO> listarFavoritosDTO(Integer idConsumidor);
 
     String eliminarFavorito(Integer idFavorito);
-
 }

@@ -1,10 +1,12 @@
 package com.mercadolocalia.services.impl;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import com.mercadolocalia.dto.FavoritoListDTO;
 import com.mercadolocalia.entities.Favorito;
 import com.mercadolocalia.repositories.ConsumidorRepository;
 import com.mercadolocalia.repositories.FavoritoRepository;
@@ -40,8 +42,20 @@ public class FavoritoServiceImpl implements FavoritoService {
     }
 
     @Override
-    public List<Favorito> listarFavoritos(Integer idConsumidor) {
-        return favoritoRepository.findByConsumidorIdConsumidor(idConsumidor);
+    public List<FavoritoListDTO> listarFavoritosDTO(Integer idConsumidor) {
+
+        List<Favorito> lista = favoritoRepository.findByConsumidorIdConsumidor(idConsumidor);
+
+        return lista.stream()
+            .filter(f -> f.getProducto() != null) // 🔥 evita errores
+            .map(f -> new FavoritoListDTO(
+                    f.getIdFavorito(),
+                    f.getProducto().getIdProducto(),
+                    f.getProducto().getNombreProducto(),
+                    f.getProducto().getPrecioProducto(),
+                    f.getProducto().getImagenProducto()
+            ))
+            .collect(Collectors.toList());
     }
 
     @Override
