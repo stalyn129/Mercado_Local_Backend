@@ -24,6 +24,17 @@ public class ProductoResponse {
 
     // ⭐ Importante para mostrar precio/unidad
     private String unidad;
+    
+    // ⭐ NUEVO: Promedio de estrellas y total de reseñas
+    private Double promedioValoracion;
+    private Integer totalValoraciones;
+
+    public Double getPromedioValoracion() { return promedioValoracion; }
+    public void setPromedioValoracion(Double promedioValoracion) { this.promedioValoracion = promedioValoracion; }
+
+    public Integer getTotalValoraciones() { return totalValoraciones; }
+    public void setTotalValoraciones(Integer totalValoraciones) { this.totalValoraciones = totalValoraciones; }
+
 
     public Integer getIdProducto() { return idProducto; }
     public void setIdProducto(Integer idProducto) { this.idProducto = idProducto; }

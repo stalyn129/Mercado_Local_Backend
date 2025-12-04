@@ -199,34 +199,57 @@ public class ProductoServiceImpl implements ProductoService {
     }
 
     // ================= CONVERTIR RESPONSE GENERAL =================
+    
     private ProductoResponse convertir(Producto p) {
         ProductoResponse r = new ProductoResponse();
+
         r.setIdProducto(p.getIdProducto());
         r.setNombreProducto(p.getNombreProducto());
         r.setDescripcionProducto(p.getDescripcionProducto());
         r.setPrecioProducto(p.getPrecioProducto());
         r.setStockProducto(p.getStockProducto());
-        r.setUnidad(p.getUnidad()); // ⚠ también lo envío aquí
+        r.setUnidad(p.getUnidad());
         r.setImagenProducto(p.getImagenProducto());
         r.setFechaPublicacion(p.getFechaPublicacion());
         r.setEstado(p.getEstado());
 
-        if (p.getVendedor()!=null) {
-            r.setIdVendedor(p.getVendedor().getIdVendedor());
-            r.setNombreEmpresa(p.getVendedor().getNombreEmpresa());
-        }
-
-        if (p.getSubcategoria()!=null) {
+        // SUBCATEGORÍA
+        if (p.getSubcategoria() != null) {
             r.setIdSubcategoria(p.getSubcategoria().getIdSubcategoria());
             r.setNombreSubcategoria(p.getSubcategoria().getNombreSubcategoria());
-            if(p.getSubcategoria().getCategoria()!=null) {
+
+            if (p.getSubcategoria().getCategoria() != null) {
                 r.setIdCategoria(p.getSubcategoria().getCategoria().getIdCategoria());
                 r.setNombreCategoria(p.getSubcategoria().getCategoria().getNombreCategoria());
             }
         }
 
+        // VENDEDOR
+        if (p.getVendedor() != null) {
+            r.setIdVendedor(p.getVendedor().getIdVendedor());
+            r.setNombreEmpresa(p.getVendedor().getNombreEmpresa());
+        }
+
+        // ⭐ VALORACIONES (PROMEDIO + TOTAL)
+        if (p.getValoraciones() != null && !p.getValoraciones().isEmpty()) {
+
+            double promedio = p.getValoraciones()
+                    .stream()
+                    .mapToDouble(v -> v.getCalificacion())
+                    .average()
+                    .orElse(0.0);
+
+            r.setPromedioValoracion(promedio);
+            r.setTotalValoraciones(p.getValoraciones().size());
+
+        } else {
+            r.setPromedioValoracion(0.0);
+            r.setTotalValoraciones(0);
+        }
+
         return r;
     }
+
     
     
     // ================= OBTENER LOS 20 MEJORES TOP =================
