@@ -58,10 +58,11 @@ public class VendedorServiceImpl implements VendedorService {
     }
 
     // ============================================================
-    // OBTENER POR USUARIO
+    // OBTENER VENDEDOR POR ID USUARIO
     // ============================================================
     @Override
     public Vendedor obtenerVendedorPorUsuario(Integer idUsuario) {
+
         Usuario usuario = usuarioRepository.findById(idUsuario)
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
@@ -69,7 +70,7 @@ public class VendedorServiceImpl implements VendedorService {
     }
 
     // ============================================================
-    // OBTENER POR ID
+    // OBTENER POR ID VENDEDOR
     // ============================================================
     @Override
     public Vendedor obtenerVendedorPorId(Integer idVendedor) {
@@ -78,7 +79,7 @@ public class VendedorServiceImpl implements VendedorService {
     }
 
     // ============================================================
-    // ESTADÍSTICAS DEL DASHBOARD
+    // ESTADÍSTICAS DEL VENDEDOR (Dashboard)
     // ============================================================
     @Override
     public EstadisticasDTO obtenerEstadisticas(Integer vendedorId) {
@@ -90,12 +91,11 @@ public class VendedorServiceImpl implements VendedorService {
         Double ingresos = pedidoRepository.sumarIngresosPorVendedor(vendedorId);
         if (ingresos == null) ingresos = 0.0;
 
-        // TOTAL PEDIDOS
+        // PEDIDOS
         Integer totalPedidos = pedidoRepository.countByVendedor(vendedor);
 
-        // TOTAL PRODUCTOS
+        // PRODUCTOS DISPONIBLES
         Integer productos = productoRepository.contarDisponiblesPorVendedor(vendedorId);
-
 
         EstadisticasDTO dto = new EstadisticasDTO();
         dto.setIngresosTotales(ingresos);
@@ -106,7 +106,7 @@ public class VendedorServiceImpl implements VendedorService {
     }
 
     // ============================================================
-    // PEDIDOS RECIENTES
+    // PEDIDOS RECIENTES (últimos 10)
     // ============================================================
     @Override
     public List<PedidoDTO> obtenerPedidosRecientes(Integer vendedorId) {
@@ -126,7 +126,7 @@ public class VendedorServiceImpl implements VendedorService {
                     dto.setTotal(p.getTotal());
                     dto.setFecha(p.getFechaPedido());
 
-                    // Cliente REAL
+                    // Cliente asociado al pedido
                     if (p.getConsumidor() != null && p.getConsumidor().getUsuario() != null) {
                         dto.setClienteNombre(
                                 p.getConsumidor().getUsuario().getNombre() + " " +
@@ -139,5 +139,13 @@ public class VendedorServiceImpl implements VendedorService {
                     return dto;
                 })
                 .collect(Collectors.toList());
+    }
+
+    // ============================================================
+    // LISTAR TODOS LOS VENDEDORES (ADMIN)
+    // ============================================================
+    @Override
+    public List<Vendedor> listarTodos() {
+        return vendedorRepository.findAll();
     }
 }

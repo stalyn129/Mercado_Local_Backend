@@ -16,29 +16,54 @@ public class CategoriaController {
     @Autowired
     private CategoriaService categoriaService;
 
+    // ============================================================
+    // 🟢 CREAR
+    // ============================================================
     @PostMapping("/crear")
     public CategoriaResponse crear(@RequestBody CategoriaRequest request) {
         return categoriaService.crearCategoria(request);
     }
 
+    // ============================================================
+    // 🟡 ACTUALIZAR
+    // ============================================================
     @PutMapping("/actualizar/{id}")
-    public CategoriaResponse actualizar(@PathVariable Integer id,
-                                        @RequestBody CategoriaRequest request) {
+    public CategoriaResponse actualizar(
+            @PathVariable Integer id,
+            @RequestBody CategoriaRequest request) {
+
         return categoriaService.actualizarCategoria(id, request);
     }
 
+    // ============================================================
+    // 🔴 ELIMINAR
+    // ============================================================
     @DeleteMapping("/eliminar/{id}")
     public void eliminar(@PathVariable Integer id) {
         categoriaService.eliminarCategoria(id);
     }
 
+    // ============================================================
+    // 🔵 OBTENER POR ID
+    // ============================================================
     @GetMapping("/{id}")
     public CategoriaResponse obtenerPorId(@PathVariable Integer id) {
         return categoriaService.obtenerCategoriaPorId(id);
     }
 
+    // ============================================================
+    // 🟣 LISTAR (ruta explícita)
+    // ============================================================
     @GetMapping("/listar")
     public List<CategoriaResponse> listar() {
+        return categoriaService.listarCategorias();
+    }
+
+    // ============================================================
+    // 🟤 LISTAR ROOT (/categorias)
+    // ============================================================
+    @GetMapping("")
+    public List<CategoriaResponse> listarRoot() {
         return categoriaService.listarCategorias();
     }
 }

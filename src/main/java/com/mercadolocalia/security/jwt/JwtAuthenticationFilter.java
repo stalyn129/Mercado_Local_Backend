@@ -2,7 +2,6 @@ package com.mercadolocalia.security.jwt;
 
 import java.io.IOException;
 import java.util.List;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -29,41 +28,45 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @Autowired private UsuarioRepository usuarioRepository;
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request,
-                                   HttpServletResponse response,
-                                   FilterChain filterChain)
-            throws ServletException, IOException {
+    protected void doFilterInternal(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            FilterChain filterChain
+    ) throws ServletException, IOException {
 
         String path = request.getRequestURI();
 
-        // ================== PERMITIMOS RUTAS PUBLICAS ==================
+        // ================== RUTAS PÚBLICAS ==================
         if (path.startsWith("/auth") ||
             path.startsWith("/uploads") ||
             path.startsWith("/swagger-ui") ||
             path.startsWith("/v3/api-docs") ||
             path.startsWith("/api-docs") ||
-            
             (path.startsWith("/productos") && request.getMethod().equals("GET")) ||
             (path.startsWith("/categorias") && request.getMethod().equals("GET")) ||
             (path.startsWith("/subcategorias") && request.getMethod().equals("GET"))
-            
         ) {
             filterChain.doFilter(request, response);
             return;
         }
 
-
-        // ===============================================================
-
+        // ================== LECTURA DEL TOKEN ==================
         String authHeader = request.getHeader("Authorization");
         String token = null;
         String correo = null;
 
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             token = authHeader.substring(7);
-            correo = jwtService.obtenerCorreoDesdeToken(token);
+
+            try {
+                correo = jwtService.obtenerCorreoDesdeToken(token);
+            } catch (Exception e) {
+                filterChain.doFilter(request, response);
+                return;
+            }
         }
 
+        // ================== VALIDACIÓN TOKEN ==================
         if (correo != null && SecurityContextHolder.getContext().getAuthentication() == null) {
 
             UserDetails userDetails = userDetailsService.loadUserByUsername(correo);
@@ -71,17 +74,20 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             if (usuario != null && jwtService.validarToken(token, usuario)) {
 
-                // >>> 🔥 Recuperamos rol desde el token
+                // extrae "ADMIN" | "VENDEDOR" | "CONSUMIDOR"
                 String rol = jwtService.extraerValor(token, "rol", String.class);
 
-                // >>> 🔥 Ahora Spring reconoce VENDEDOR
+                // Spring requiere formato ROLE_XXXX
+                SimpleGrantedAuthority authority =
+                        new SimpleGrantedAuthority("ROLE_" + rol.toUpperCase());
+
                 UsernamePasswordAuthenticationToken authToken =
                         new UsernamePasswordAuthenticationToken(
                                 userDetails,
                                 null,
-                                List.of(new SimpleGrantedAuthority(rol)) // ⬅ YA TIENES PERMISO
+                                List.of(authority)
                         );
-                
+
                 authToken.setDetails(
                         new WebAuthenticationDetailsSource().buildDetails(request)
                 );

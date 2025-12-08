@@ -3,14 +3,7 @@ package com.mercadolocalia.entities;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 
 @Entity
 @Table(name = "usuarios")
@@ -49,7 +42,7 @@ public class Usuario {
     @Column(name = "estado")
     private String estado;
 
-    // ===== GETTERS & SETTERS =====
+    // ======================= GETTERS & SETTERS =======================
 
     public Integer getIdUsuario() {
         return idUsuario;

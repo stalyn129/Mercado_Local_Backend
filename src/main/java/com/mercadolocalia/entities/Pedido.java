@@ -14,6 +14,10 @@ public class Pedido {
     @Column(name = "id_pedido")
     private Integer idPedido;
 
+    // ============================================================
+    // RELACIONES
+    // ============================================================
+
     @ManyToOne
     @JoinColumn(name = "id_consumidor", nullable = false)
     private Consumidor consumidor;
@@ -21,6 +25,18 @@ public class Pedido {
     @ManyToOne
     @JoinColumn(name = "id_vendedor", nullable = false)
     private Vendedor vendedor;
+
+    @OneToMany(
+        mappedBy = "pedido", 
+        cascade = CascadeType.ALL, 
+        orphanRemoval = true, 
+        fetch = FetchType.LAZY
+    )
+    private List<DetallePedido> detalles = new ArrayList<>();
+
+    // ============================================================
+    // CAMPOS
+    // ============================================================
 
     @Column(name = "fecha_pedido")
     private LocalDateTime fechaPedido;
@@ -39,26 +55,16 @@ public class Pedido {
 
     @Column(name = "metodo_pago")
     private String metodoPago;
-    
-    @Column(nullable = true)
+
+    @Column(name = "comprobante_url", nullable = true)
     private String comprobanteUrl;
 
-    @Column(nullable = true)
+    @Column(name = "datos_tarjeta", nullable = true)
     private String datosTarjeta;
-    
 
+    // ============================================================
     // GETTERS & SETTERS
-    
-    @OneToMany(mappedBy = "pedido", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<DetallePedido> detalles = new ArrayList<>();
-
-    public List<DetallePedido> getDetalles() {
-        return detalles;
-    }
-
-    public void setDetalles(List<DetallePedido> detalles) {
-        this.detalles = detalles;
-    }
+    // ============================================================
 
     public Integer getIdPedido() {
         return idPedido;
@@ -131,7 +137,15 @@ public class Pedido {
     public void setMetodoPago(String metodoPago) {
         this.metodoPago = metodoPago;
     }
-    
+
+    public List<DetallePedido> getDetalles() {
+        return detalles;
+    }
+
+    public void setDetalles(List<DetallePedido> detalles) {
+        this.detalles = detalles;
+    }
+
     public String getComprobanteUrl() {
         return comprobanteUrl;
     }
@@ -147,5 +161,4 @@ public class Pedido {
     public void setDatosTarjeta(String datosTarjeta) {
         this.datosTarjeta = datosTarjeta;
     }
-
 }

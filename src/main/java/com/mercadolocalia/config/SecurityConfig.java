@@ -17,89 +17,92 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @Configuration
 public class SecurityConfig {
 
-	@Autowired
-	private JwtAuthenticationFilter jwtFilter;
+    @Autowired
+    private JwtAuthenticationFilter jwtFilter;
 
-	@Bean
-	public PasswordEncoder passwordEncoder() {
-		return new BCryptPasswordEncoder();
-	}
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
 
-	@Bean
-	public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 
-	    http
-	        .cors(cors -> {})   // 🔥 Activa tu CorsConfig sin romper nada
-	        .csrf(csrf -> csrf.disable())
-	        .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-	        .authorizeHttpRequests(auth -> auth
+        http
+            .cors(cors -> {})
+            .csrf(csrf -> csrf.disable())
+            .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .authorizeHttpRequests(auth -> auth
 
-	                // ========= Swagger =========
-	                .requestMatchers(
-	                        "/swagger-ui.html",
-	                        "/swagger-ui/**",
-	                        "/v3/api-docs/**",
-	                        "/v3/api-docs",
-	                        "/api-docs/**",
-	                        "/api-docs/swagger-config",
-	                        "/swagger-resources/**",
-	                        "/swagger-config",
-	                        "/webjars/**"
-	                ).permitAll()
+                // ============================
+                // 🔓 PÚBLICO
+                // ============================
+                .requestMatchers(
+                        "/swagger-ui.html",
+                        "/swagger-ui/**",
+                        "/v3/api-docs/**",
+                        "/v3/api-docs",
+                        "/api-docs/**",
+                        "/swagger-resources/**",
+                        "/swagger-config",
+                        "/webjars/**"
+                ).permitAll()
 
-	                // ========= Público =========
-	                .requestMatchers("/auth/**", "/uploads/**").permitAll()
-	                .requestMatchers("/categorias/**", "/subcategorias/**").permitAll()
-	                .requestMatchers(HttpMethod.GET, "/productos/**").permitAll()
+                .requestMatchers("/auth/**").permitAll()
+                .requestMatchers("/uploads/**").permitAll()
 
-	                // ========= Solo VENDEDOR =========
-	                .requestMatchers(HttpMethod.GET, "/productos/**").permitAll()
+                // Productos públicos
+                .requestMatchers(HttpMethod.GET, "/productos/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/categorias/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/subcategorias/**").permitAll()
 
-	             .requestMatchers(HttpMethod.POST, "/productos/crear").hasAuthority("VENDEDOR")
-	             .requestMatchers(HttpMethod.PUT, "/productos/editar/**").hasAuthority("VENDEDOR")
-	             .requestMatchers(HttpMethod.DELETE, "/productos/eliminar/**").hasAuthority("VENDEDOR")
-	             .requestMatchers(HttpMethod.PUT, "/productos/estado/**").hasAuthority("VENDEDOR")
-	             .requestMatchers(HttpMethod.GET, "/productos/vendedor/**").hasAuthority("VENDEDOR")
+                // ============================
+                // 👑 ADMIN (CORREGIDO)
+                // ============================
+                .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                .requestMatchers("/admin/**").hasRole("ADMIN")
+                .requestMatchers("/admin/logs/**").hasRole("ADMIN")
+                .requestMatchers("/reportes/**").hasRole("ADMIN")
 
+                // ============================
+                // 🛒 VENDEDOR
+                // ============================
+                .requestMatchers("/vendedor/**").hasAnyRole("VENDEDOR", "ADMIN")
+                .requestMatchers(HttpMethod.POST, "/productos/crear").hasRole("VENDEDOR")
+                .requestMatchers(HttpMethod.PUT, "/productos/editar/**").hasRole("VENDEDOR")
+                .requestMatchers(HttpMethod.DELETE, "/productos/eliminar/**").hasRole("VENDEDOR")
+                .requestMatchers(HttpMethod.PUT, "/productos/estado/**").hasRole("VENDEDOR")
+                .requestMatchers(HttpMethod.GET, "/productos/vendedor/**").hasRole("VENDEDOR")
 
-	                // ========= Admin =========
-	                .requestMatchers("/admin/**").hasAuthority("ADMIN")
+                // ============================
+                // 👤 CONSUMIDOR
+                // ============================
+                .requestMatchers("/consumidor/**").hasRole("CONSUMIDOR")
+                .requestMatchers(HttpMethod.POST, "/valoraciones/crear").hasRole("CONSUMIDOR")
+                .requestMatchers(HttpMethod.GET, "/valoraciones/**").permitAll()
+                .requestMatchers(HttpMethod.POST, "/favoritos/agregar").hasRole("CONSUMIDOR")
+                .requestMatchers(HttpMethod.GET, "/favoritos/listar/**").hasRole("CONSUMIDOR")
 
-	             // ========= Consumidor =========
-	                .requestMatchers("/consumidor/**").hasAuthority("CONSUMIDOR")
-	                .requestMatchers(HttpMethod.POST, "/valoraciones/crear").hasAuthority("CONSUMIDOR")
-	                .requestMatchers(HttpMethod.GET, "/valoraciones/**").permitAll()
-	                .requestMatchers(HttpMethod.POST, "/favoritos/agregar").hasAuthority("CONSUMIDOR")
-	             // Listar favoritos (solo consumidor autenticado)
-	                .requestMatchers(HttpMethod.GET, "/favoritos/listar/**").hasAuthority("CONSUMIDOR")
+                .requestMatchers(HttpMethod.POST, "/pedidos/comprar-ahora").hasRole("CONSUMIDOR")
+                .requestMatchers(HttpMethod.PUT, "/pedidos/finalizar/**").hasRole("CONSUMIDOR")
+                .requestMatchers(HttpMethod.GET, "/pedidos/**").hasRole("CONSUMIDOR")
 
-	                
-	             // ========= Pedidos =========
+                // ============================
+                // 🔐 CUALQUIER OTRA RUTA → TOKEN
+                // ============================
+                .anyRequest().authenticated()
+            )
 
-	             // FIRST — Finalizar compra
-	             .requestMatchers(HttpMethod.PUT, "/pedidos/finalizar/**").hasAuthority("CONSUMIDOR")
+            // ============================
+            // 🔥 FILTRO JWT
+            // ============================
+            .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
-	             // Comprar ahora
-	             .requestMatchers(HttpMethod.POST, "/pedidos/comprar-ahora").hasAuthority("CONSUMIDOR")
+        return http.build();
+    }
 
-	             // Listar pedidos y detalles
-	             .requestMatchers(HttpMethod.GET, "/pedidos/**").hasAuthority("CONSUMIDOR")
-
-
-	                .anyRequest().authenticated()
-
-	        )
-
-	        // JWT
-	        .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
-
-	    return http.build();
-	}
-
-
-
-	@Bean
-	public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
-		return config.getAuthenticationManager();
-	}
+    @Bean
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
+        return config.getAuthenticationManager();
+    }
 }
