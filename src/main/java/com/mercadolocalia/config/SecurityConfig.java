@@ -56,8 +56,20 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/categorias/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/subcategorias/**").permitAll()
 
+
                 // ============================
-                // 👑 ADMIN (CORREGIDO)
+                // 🔥 PERMITIR MICRO SERVICIO IA
+                // ============================
+                .requestMatchers("/api/ia/**").permitAll()
+                // Esto habilita:
+                // - /api/ia/precio/{id}
+                // - /api/ia/demanda/{id}
+                // - /api/ia/recomendar/{id}
+                // - /api/ia/chat   ✔✔✔
+
+
+                // ============================
+                // 👑 ADMIN
                 // ============================
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 .requestMatchers("/admin/**").hasRole("ADMIN")
@@ -88,14 +100,11 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/pedidos/**").hasRole("CONSUMIDOR")
 
                 // ============================
-                // 🔐 CUALQUIER OTRA RUTA → TOKEN
+                // 🔐 CUALQUIER OTRA RUTA REQUIERE TOKEN
                 // ============================
                 .anyRequest().authenticated()
             )
 
-            // ============================
-            // 🔥 FILTRO JWT
-            // ============================
             .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
