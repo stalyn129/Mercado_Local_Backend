@@ -3,7 +3,9 @@ package com.mercadolocalia.services.impl;
 import java.io.File;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -24,369 +26,384 @@ import com.mercadolocalia.repositories.ProductoRepository;
 import com.mercadolocalia.repositories.VendedorRepository;
 import com.mercadolocalia.services.PedidoService;
 
+
 @Service
 public class PedidoServiceImpl implements PedidoService {
 
-    @Autowired private PedidoRepository pedidoRepository;
-    @Autowired private DetallePedidoRepository detallePedidoRepository;
-    @Autowired private ConsumidorRepository consumidorRepository;
-    @Autowired private VendedorRepository vendedorRepository;
-    @Autowired private ProductoRepository productoRepository;
+	@Autowired
+	private PedidoRepository pedidoRepository;
+	@Autowired
+	private DetallePedidoRepository detallePedidoRepository;
+	@Autowired
+	private ConsumidorRepository consumidorRepository;
+	@Autowired
+	private VendedorRepository vendedorRepository;
+	@Autowired
+	private ProductoRepository productoRepository;
+
+
+	// ============================================================
+	// CREAR PEDIDO COMPLETO (CARRITO)
+	// ============================================================
+	@Override
+	public Pedido crearPedido(PedidoRequest request) {
+
+		Consumidor consumidor = consumidorRepository.findById(request.getIdConsumidor())
+				.orElseThrow(() -> new RuntimeException("Consumidor no encontrado"));
+
+		Vendedor vendedor = vendedorRepository.findById(request.getIdVendedor())
+				.orElseThrow(() -> new RuntimeException("Vendedor no encontrado"));
+
+		Pedido pedido = new Pedido();
+		pedido.setConsumidor(consumidor);
+		pedido.setVendedor(vendedor);
+		pedido.setFechaPedido(LocalDateTime.now());
+		pedido.setEstadoPedido("Pendiente");
+		pedido.setMetodoPago(request.getMetodoPago());
+		pedido.setSubtotal(0.0);
+		pedido.setIva(0.0);
+		pedido.setTotal(0.0);
+
+		pedidoRepository.save(pedido);
+
+		double subtotal = 0;
+
+		List<DetallePedido> detalles = new ArrayList<>();
+
+		for (DetallePedidoAddRequest detRequest : request.getDetalles()) {
+
+			Producto producto = productoRepository.findById(detRequest.getIdProducto())
+					.orElseThrow(() -> new RuntimeException("Producto no encontrado"));
+
+			if (producto.getStockProducto() < detRequest.getCantidad()) {
+				throw new RuntimeException("Stock insuficiente para " + producto.getNombreProducto());
+			}
+
+			producto.setStockProducto(producto.getStockProducto() - detRequest.getCantidad());
+			productoRepository.save(producto);
+
+			double precioUnitario = producto.getPrecioProducto();
+			double subtotalDet = precioUnitario * detRequest.getCantidad();
+
+			DetallePedido detalle = new DetallePedido();
+			detalle.setPedido(pedido);
+			detalle.setProducto(producto);
+			detalle.setCantidad(detRequest.getCantidad());
+			detalle.setPrecioUnitario(precioUnitario);
+			detalle.setSubtotal(subtotalDet);
+
+			detallePedidoRepository.save(detalle);
+			detalles.add(detalle);
+
+			subtotal += subtotalDet;
+		}
+
+		double iva = subtotal * 0.12;
+		double total = subtotal + iva;
+
+		pedido.setSubtotal(subtotal);
+		pedido.setIva(iva);
+		pedido.setTotal(total);
+
+		return pedidoRepository.save(pedido);
+	}
+
+	// ============================================================
+	// OBTENER PEDIDO POR ID
+	// ============================================================
+	@Override
+	public Pedido obtenerPedidoPorId(Integer id) {
+		return pedidoRepository.findById(id).orElseThrow(() -> new RuntimeException("Pedido no encontrado"));
+	}
+
+	// ============================================================
+	// LISTAR POR CONSUMIDOR
+	// ============================================================
+	@Override
+	public List<Pedido> listarPedidosPorConsumidor(Integer idConsumidor) {
+
+		Consumidor consumidor = consumidorRepository.findById(idConsumidor)
+				.orElseThrow(() -> new RuntimeException("Consumidor no encontrado"));
+
+		return pedidoRepository.findByConsumidor(consumidor);
+	}
+
+	// ============================================================
+	// LISTAR POR VENDEDOR
+	// ============================================================
+	@Override
+	public List<Pedido> listarPedidosPorVendedor(Integer idVendedor) {
+
+		Vendedor vendedor = vendedorRepository.findById(idVendedor)
+				.orElseThrow(() -> new RuntimeException("Vendedor no encontrado"));
+
+		return pedidoRepository.findByVendedor(vendedor);
+	}
+
+	// ============================================================
+	// LISTAR DETALLES
+	// ============================================================
+	@Override
+	public List<DetallePedido> listarDetalles(Integer idPedido) {
+
+		Pedido pedido = pedidoRepository.findById(idPedido)
+				.orElseThrow(() -> new RuntimeException("Pedido no encontrado"));
+
+		return detallePedidoRepository.findByPedido(pedido);
+	}
+
+	// ============================================================
+	// CAMBIAR ESTADO
+	// ============================================================
+	@Override
+	public Pedido cambiarEstado(Integer idPedido, String nuevoEstado) {
+
+		Pedido pedido = pedidoRepository.findById(idPedido)
+				.orElseThrow(() -> new RuntimeException("Pedido no encontrado"));
+
+		pedido.setEstadoPedido(nuevoEstado);
+		return pedidoRepository.save(pedido);
+	}
 
+	// ============================================================
+	// COMPRAR AHORA (1 SOLO PRODUCTO)
+	// ============================================================
+	@Override
+	public Pedido comprarAhora(PedidoRequest request) {
 
-    // ============================================================
-    // CREAR PEDIDO COMPLETO (CARRITO)
-    // ============================================================
-    @Override
-    public Pedido crearPedido(PedidoRequest request) {
+		Consumidor consumidor = consumidorRepository.findById(request.getIdConsumidor())
+				.orElseThrow(() -> new RuntimeException("Consumidor no encontrado"));
 
-        Consumidor consumidor = consumidorRepository.findById(request.getIdConsumidor())
-                .orElseThrow(() -> new RuntimeException("Consumidor no encontrado"));
+		Vendedor vendedor = vendedorRepository.findById(request.getIdVendedor())
+				.orElseThrow(() -> new RuntimeException("Vendedor no encontrado"));
 
-        Vendedor vendedor = vendedorRepository.findById(request.getIdVendedor())
-                .orElseThrow(() -> new RuntimeException("Vendedor no encontrado"));
+		Pedido pedido = new Pedido();
+		pedido.setConsumidor(consumidor);
+		pedido.setVendedor(vendedor);
+		pedido.setFechaPedido(LocalDateTime.now());
+		pedido.setEstadoPedido("Pendiente");
+		pedido.setMetodoPago(request.getMetodoPago());
+		pedido.setSubtotal(0.0);
+		pedido.setIva(0.0);
+		pedido.setTotal(0.0);
 
-        Pedido pedido = new Pedido();
-        pedido.setConsumidor(consumidor);
-        pedido.setVendedor(vendedor);
-        pedido.setFechaPedido(LocalDateTime.now());
-        pedido.setEstadoPedido("Pendiente");
-        pedido.setMetodoPago(request.getMetodoPago());
-        pedido.setSubtotal(0.0);
-        pedido.setIva(0.0);
-        pedido.setTotal(0.0);
+		pedidoRepository.save(pedido);
 
-        pedidoRepository.save(pedido);
+		if (request.getDetalles() == null || request.getDetalles().isEmpty()) {
+			throw new RuntimeException("No se envió ningún producto para la compra.");
+		}
 
-        double subtotal = 0;
+		DetallePedidoAddRequest detRequest = request.getDetalles().get(0);
 
-        List<DetallePedido> detalles = new ArrayList<>();
+		Producto producto = productoRepository.findById(detRequest.getIdProducto())
+				.orElseThrow(() -> new RuntimeException("Producto no encontrado"));
 
-        for (DetallePedidoAddRequest detRequest : request.getDetalles()) {
+		if (producto.getStockProducto() < detRequest.getCantidad()) {
+			throw new RuntimeException("Stock insuficiente para " + producto.getNombreProducto());
+		}
 
-            Producto producto = productoRepository.findById(detRequest.getIdProducto())
-                    .orElseThrow(() -> new RuntimeException("Producto no encontrado"));
+		producto.setStockProducto(producto.getStockProducto() - detRequest.getCantidad());
+		productoRepository.save(producto);
 
-            if (producto.getStockProducto() < detRequest.getCantidad()) {
-                throw new RuntimeException("Stock insuficiente para " + producto.getNombreProducto());
-            }
+		double subtotal = producto.getPrecioProducto() * detRequest.getCantidad();
+		double iva = subtotal * 0.12;
+		double total = subtotal + iva;
 
-            producto.setStockProducto(producto.getStockProducto() - detRequest.getCantidad());
-            productoRepository.save(producto);
+		DetallePedido detalle = new DetallePedido();
+		detalle.setPedido(pedido);
+		detalle.setProducto(producto);
+		detalle.setCantidad(detRequest.getCantidad());
+		detalle.setPrecioUnitario(producto.getPrecioProducto());
+		detalle.setSubtotal(subtotal);
 
-            double precioUnitario = producto.getPrecioProducto();
-            double subtotalDet = precioUnitario * detRequest.getCantidad();
+		detallePedidoRepository.save(detalle);
 
-            DetallePedido detalle = new DetallePedido();
-            detalle.setPedido(pedido);
-            detalle.setProducto(producto);
-            detalle.setCantidad(detRequest.getCantidad());
-            detalle.setPrecioUnitario(precioUnitario);
-            detalle.setSubtotal(subtotalDet);
+		pedido.setSubtotal(subtotal);
+		pedido.setIva(iva);
+		pedido.setTotal(total);
 
-            detallePedidoRepository.save(detalle);
-            detalles.add(detalle);
+		return pedidoRepository.save(pedido);
+	}
 
-            subtotal += subtotalDet;
-        }
+	// ============================================================
+	// FINALIZAR COMPRA (EFECTIVO – TRANSFERENCIA – TARJETA)
+	// ============================================================
+	@Override
+	public Pedido finalizarPedido(Integer idPedido, String metodoPago, MultipartFile comprobante, String numTarjeta,
+			String fechaTarjeta, String cvv, String titular) {
 
-        double iva = subtotal * 0.12;
-        double total = subtotal + iva;
+		Pedido pedido = pedidoRepository.findById(idPedido)
+				.orElseThrow(() -> new RuntimeException("Pedido no encontrado"));
 
-        pedido.setSubtotal(subtotal);
-        pedido.setIva(iva);
-        pedido.setTotal(total);
+		pedido.setMetodoPago(metodoPago);
 
-        return pedidoRepository.save(pedido);
-    }
+		// ---------------- EFECTIVO ----------------
+		if (metodoPago.equalsIgnoreCase("EFECTIVO")) {
+			pedido.setEstadoPedido("COMPLETADO");
+			return pedidoRepository.save(pedido);
+		}
 
+		// ---------------- TRANSFERENCIA ----------------
+		if (metodoPago.equalsIgnoreCase("TRANSFERENCIA")) {
 
-    // ============================================================
-    // OBTENER PEDIDO POR ID
-    // ============================================================
-    @Override
-    public Pedido obtenerPedidoPorId(Integer id) {
-        return pedidoRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Pedido no encontrado"));
-    }
+			if (comprobante == null || comprobante.isEmpty()) {
+				throw new RuntimeException("Debe subir comprobante.");
+			}
 
+			try {
+				String carpeta = "uploads/comprobantes/";
+				File destinoCarpeta = new File(carpeta);
+				if (!destinoCarpeta.exists())
+					destinoCarpeta.mkdirs();
 
-    // ============================================================
-    // LISTAR POR CONSUMIDOR
-    // ============================================================
-    @Override
-    public List<Pedido> listarPedidosPorConsumidor(Integer idConsumidor) {
+				String nombreArchivo = System.currentTimeMillis() + "_" + comprobante.getOriginalFilename();
+				File destino = new File(carpeta + nombreArchivo);
 
-        Consumidor consumidor = consumidorRepository.findById(idConsumidor)
-                .orElseThrow(() -> new RuntimeException("Consumidor no encontrado"));
+				comprobante.transferTo(destino);
 
-        return pedidoRepository.findByConsumidor(consumidor);
-    }
+				pedido.setComprobanteUrl("/" + carpeta + nombreArchivo);
+				pedido.setEstadoPedido("PENDIENTE_VERIFICACION");
 
+			} catch (Exception e) {
+				throw new RuntimeException("Error al guardar comprobante: " + e.getMessage());
+			}
 
-    // ============================================================
-    // LISTAR POR VENDEDOR
-    // ============================================================
-    @Override
-    public List<Pedido> listarPedidosPorVendedor(Integer idVendedor) {
+			return pedidoRepository.save(pedido);
+		}
 
-        Vendedor vendedor = vendedorRepository.findById(idVendedor)
-                .orElseThrow(() -> new RuntimeException("Vendedor no encontrado"));
+		// ---------------- TARJETA ----------------
+		if (metodoPago.equalsIgnoreCase("TARJETA")) {
 
-        return pedidoRepository.findByVendedor(vendedor);
-    }
+			if (numTarjeta == null || numTarjeta.length() < 16)
+				throw new RuntimeException("Número de tarjeta inválido");
 
+			if (cvv == null || cvv.length() < 3)
+				throw new RuntimeException("CVV inválido");
 
-    // ============================================================
-    // LISTAR DETALLES
-    // ============================================================
-    @Override
-    public List<DetallePedido> listarDetalles(Integer idPedido) {
+			if (fechaTarjeta == null)
+				throw new RuntimeException("Fecha de expiración inválida");
 
-        Pedido pedido = pedidoRepository.findById(idPedido)
-                .orElseThrow(() -> new RuntimeException("Pedido no encontrado"));
+			if (titular == null || titular.length() < 3)
+				throw new RuntimeException("Nombre del titular inválido");
 
-        return detallePedidoRepository.findByPedido(pedido);
-    }
+			String ultimos4 = numTarjeta.substring(numTarjeta.length() - 4);
+			pedido.setDatosTarjeta("**** **** **** " + ultimos4);
 
+			pedido.setEstadoPedido("COMPLETADO");
+		}
 
-    // ============================================================
-    // CAMBIAR ESTADO
-    // ============================================================
-    @Override
-    public Pedido cambiarEstado(Integer idPedido, String nuevoEstado) {
+		return pedidoRepository.save(pedido);
+	}
 
-        Pedido pedido = pedidoRepository.findById(idPedido)
-                .orElseThrow(() -> new RuntimeException("Pedido no encontrado"));
+	// ============================================================
+	// CREAR PEDIDO DESDE CARRITO (NUEVO)
+	// ============================================================
+	@Override
+	public Pedido crearPedidoDesdeCarrito(PedidoCarritoRequest request) {
 
-        pedido.setEstadoPedido(nuevoEstado);
-        return pedidoRepository.save(pedido);
-    }
+		Consumidor consumidor = consumidorRepository.findById(request.getIdConsumidor())
+				.orElseThrow(() -> new RuntimeException("Consumidor no encontrado"));
 
+		Vendedor vendedor = vendedorRepository.findById(request.getIdVendedor())
+				.orElseThrow(() -> new RuntimeException("Vendedor no encontrado"));
 
-    // ============================================================
-    // COMPRAR AHORA (1 SOLO PRODUCTO)
-    // ============================================================
-    @Override
-    public Pedido comprarAhora(PedidoRequest request) {
+		Pedido pedido = new Pedido();
+		pedido.setConsumidor(consumidor);
+		pedido.setVendedor(vendedor);
+		pedido.setFechaPedido(LocalDateTime.now());
+		pedido.setEstadoPedido("Pendiente");
+		pedido.setMetodoPago("SIN_ASIGNAR");
 
-        Consumidor consumidor = consumidorRepository.findById(request.getIdConsumidor())
-                .orElseThrow(() -> new RuntimeException("Consumidor no encontrado"));
+		pedidoRepository.save(pedido);
 
-        Vendedor vendedor = vendedorRepository.findById(request.getIdVendedor())
-                .orElseThrow(() -> new RuntimeException("Vendedor no encontrado"));
+		double subtotal = 0;
 
-        Pedido pedido = new Pedido();
-        pedido.setConsumidor(consumidor);
-        pedido.setVendedor(vendedor);
-        pedido.setFechaPedido(LocalDateTime.now());
-        pedido.setEstadoPedido("Pendiente");
-        pedido.setMetodoPago(request.getMetodoPago());
-        pedido.setSubtotal(0.0);
-        pedido.setIva(0.0);
-        pedido.setTotal(0.0);
+		for (PedidoCarritoRequest.DetalleProducto item : request.getDetalles()) {
 
-        pedidoRepository.save(pedido);
+			Producto producto = productoRepository.findById(item.getIdProducto())
+					.orElseThrow(() -> new RuntimeException("Producto no encontrado"));
 
-        if (request.getDetalles() == null || request.getDetalles().isEmpty()) {
-            throw new RuntimeException("No se envió ningún producto para la compra.");
-        }
+			if (producto.getStockProducto() < item.getCantidad()) {
+				throw new RuntimeException("Stock insuficiente para " + producto.getNombreProducto());
+			}
 
-        DetallePedidoAddRequest detRequest = request.getDetalles().get(0);
+			producto.setStockProducto(producto.getStockProducto() - item.getCantidad());
+			productoRepository.save(producto);
 
-        Producto producto = productoRepository.findById(detRequest.getIdProducto())
-                .orElseThrow(() -> new RuntimeException("Producto no encontrado"));
+			double precio = producto.getPrecioProducto();
+			double subtotalDet = precio * item.getCantidad();
 
-        if (producto.getStockProducto() < detRequest.getCantidad()) {
-            throw new RuntimeException("Stock insuficiente para " + producto.getNombreProducto());
-        }
+			DetallePedido det = new DetallePedido();
+			det.setPedido(pedido);
+			det.setProducto(producto);
+			det.setCantidad(item.getCantidad());
+			det.setPrecioUnitario(precio);
+			det.setSubtotal(subtotalDet);
 
-        producto.setStockProducto(producto.getStockProducto() - detRequest.getCantidad());
-        productoRepository.save(producto);
+			detallePedidoRepository.save(det);
 
-        double subtotal = producto.getPrecioProducto() * detRequest.getCantidad();
-        double iva = subtotal * 0.12;
-        double total = subtotal + iva;
+			subtotal += subtotalDet;
+		}
 
-        DetallePedido detalle = new DetallePedido();
-        detalle.setPedido(pedido);
-        detalle.setProducto(producto);
-        detalle.setCantidad(detRequest.getCantidad());
-        detalle.setPrecioUnitario(producto.getPrecioProducto());
-        detalle.setSubtotal(subtotal);
+		double iva = subtotal * 0.12;
+		double total = subtotal + iva;
 
-        detallePedidoRepository.save(detalle);
+		pedido.setSubtotal(subtotal);
+		pedido.setIva(iva);
+		pedido.setTotal(total);
 
-        pedido.setSubtotal(subtotal);
-        pedido.setIva(iva);
-        pedido.setTotal(total);
+		return pedidoRepository.save(pedido);
+	}
 
-        return pedidoRepository.save(pedido);
-    }
+	// ============================================================
+	// FINALIZAR COMPRA — MODO SIMPLE (PUT)
+	// ============================================================
+	@Override
+	public Pedido finalizarPedido(Integer idPedido, String metodoPago) {
 
+		Pedido pedido = pedidoRepository.findById(idPedido)
+				.orElseThrow(() -> new RuntimeException("Pedido no encontrado"));
 
-    // ============================================================
-    // FINALIZAR COMPRA (EFECTIVO – TRANSFERENCIA – TARJETA)
-    // ============================================================
-    @Override
-    public Pedido finalizarPedido(
-            Integer idPedido,
-            String metodoPago,
-            MultipartFile comprobante,
-            String numTarjeta,
-            String fechaTarjeta,
-            String cvv,
-            String titular
-    ) {
+		pedido.setMetodoPago(metodoPago);
 
-        Pedido pedido = pedidoRepository.findById(idPedido)
-                .orElseThrow(() -> new RuntimeException("Pedido no encontrado"));
+		// Si es efectivo → se completa inmediatamente
+		if (metodoPago.equalsIgnoreCase("EFECTIVO")) {
+			pedido.setEstadoPedido("COMPLETADO");
+		}
 
-        pedido.setMetodoPago(metodoPago);
+		// Si es transferencia o tarjeta → queda pendiente
+		if (metodoPago.equalsIgnoreCase("TRANSFERENCIA") || metodoPago.equalsIgnoreCase("TARJETA")) {
 
-        // ---------------- EFECTIVO ----------------
-        if (metodoPago.equalsIgnoreCase("EFECTIVO")) {
-            pedido.setEstadoPedido("COMPLETADO");
-            return pedidoRepository.save(pedido);
-        }
+			pedido.setEstadoPedido("PENDIENTE_VERIFICACION");
+		}
 
-        // ---------------- TRANSFERENCIA ----------------
-        if (metodoPago.equalsIgnoreCase("TRANSFERENCIA")) {
+		return pedidoRepository.save(pedido);
+	}
 
-            if (comprobante == null || comprobante.isEmpty()) {
-                throw new RuntimeException("Debe subir comprobante.");
-            }
+	@Override
+	public Map<String, Object> obtenerEstadisticasVendedor(Integer idVendedor) {
 
-            try {
-                String carpeta = "uploads/comprobantes/";
-                File destinoCarpeta = new File(carpeta);
-                if (!destinoCarpeta.exists()) destinoCarpeta.mkdirs();
+	    Vendedor vendedor = vendedorRepository.findById(idVendedor)
+	            .orElseThrow(() -> new RuntimeException("Vendedor no encontrado"));
 
-                String nombreArchivo = System.currentTimeMillis() + "_" + comprobante.getOriginalFilename();
-                File destino = new File(carpeta + nombreArchivo);
+	    Integer pedidosCompletados = pedidoRepository.countByVendedor(vendedor);
 
-                comprobante.transferTo(destino);
+	    Double totalGenerado = pedidoRepository.sumarIngresosPorVendedor(idVendedor);
 
-                pedido.setComprobanteUrl("/" + carpeta + nombreArchivo);
-                pedido.setEstadoPedido("PENDIENTE_VERIFICACION");
+	    if (totalGenerado == null) {
+	        totalGenerado = 0.0;
+	    }
 
-            } catch (Exception e) {
-                throw new RuntimeException("Error al guardar comprobante: " + e.getMessage());
-            }
+	    Double promedio =
+	            pedidosCompletados > 0 ? totalGenerado / pedidosCompletados : 0.0;
 
-            return pedidoRepository.save(pedido);
-        }
+	    Map<String, Object> stats = new HashMap<>();
+	    stats.put("pedidos", pedidosCompletados);
+	    stats.put("total", totalGenerado);
+	    stats.put("promedio", promedio);
 
-        // ---------------- TARJETA ----------------
-        if (metodoPago.equalsIgnoreCase("TARJETA")) {
+	    return stats;
+	}
 
-            if (numTarjeta == null || numTarjeta.length() < 16)
-                throw new RuntimeException("Número de tarjeta inválido");
-
-            if (cvv == null || cvv.length() < 3)
-                throw new RuntimeException("CVV inválido");
-
-            if (fechaTarjeta == null)
-                throw new RuntimeException("Fecha de expiración inválida");
-
-            if (titular == null || titular.length() < 3)
-                throw new RuntimeException("Nombre del titular inválido");
-
-            String ultimos4 = numTarjeta.substring(numTarjeta.length() - 4);
-            pedido.setDatosTarjeta("**** **** **** " + ultimos4);
-
-            pedido.setEstadoPedido("COMPLETADO");
-        }
-
-        return pedidoRepository.save(pedido);
-    }
-
-
-    // ============================================================
-    // CREAR PEDIDO DESDE CARRITO (NUEVO)
-    // ============================================================
-    @Override
-    public Pedido crearPedidoDesdeCarrito(PedidoCarritoRequest request) {
-
-        Consumidor consumidor = consumidorRepository.findById(request.getIdConsumidor())
-                .orElseThrow(() -> new RuntimeException("Consumidor no encontrado"));
-
-        Vendedor vendedor = vendedorRepository.findById(request.getIdVendedor())
-                .orElseThrow(() -> new RuntimeException("Vendedor no encontrado"));
-
-        Pedido pedido = new Pedido();
-        pedido.setConsumidor(consumidor);
-        pedido.setVendedor(vendedor);
-        pedido.setFechaPedido(LocalDateTime.now());
-        pedido.setEstadoPedido("Pendiente");
-        pedido.setMetodoPago("SIN_ASIGNAR");
-
-        pedidoRepository.save(pedido);
-
-        double subtotal = 0;
-
-        for (PedidoCarritoRequest.DetalleProducto item : request.getDetalles()) {
-
-            Producto producto = productoRepository.findById(item.getIdProducto())
-                    .orElseThrow(() -> new RuntimeException("Producto no encontrado"));
-
-            if (producto.getStockProducto() < item.getCantidad()) {
-                throw new RuntimeException("Stock insuficiente para " + producto.getNombreProducto());
-            }
-
-            producto.setStockProducto(producto.getStockProducto() - item.getCantidad());
-            productoRepository.save(producto);
-
-            double precio = producto.getPrecioProducto();
-            double subtotalDet = precio * item.getCantidad();
-
-            DetallePedido det = new DetallePedido();
-            det.setPedido(pedido);
-            det.setProducto(producto);
-            det.setCantidad(item.getCantidad());
-            det.setPrecioUnitario(precio);
-            det.setSubtotal(subtotalDet);
-
-            detallePedidoRepository.save(det);
-
-            subtotal += subtotalDet;
-        }
-
-        double iva = subtotal * 0.12;
-        double total = subtotal + iva;
-
-        pedido.setSubtotal(subtotal);
-        pedido.setIva(iva);
-        pedido.setTotal(total);
-
-        return pedidoRepository.save(pedido);
-    }
-
-    
- // ============================================================
- // FINALIZAR COMPRA — MODO SIMPLE (PUT)
- // ============================================================
- @Override
- public Pedido finalizarPedido(Integer idPedido, String metodoPago) {
-
-     Pedido pedido = pedidoRepository.findById(idPedido)
-             .orElseThrow(() -> new RuntimeException("Pedido no encontrado"));
-
-     pedido.setMetodoPago(metodoPago);
-
-     // Si es efectivo → se completa inmediatamente
-     if (metodoPago.equalsIgnoreCase("EFECTIVO")) {
-         pedido.setEstadoPedido("COMPLETADO");
-     }
-
-     // Si es transferencia o tarjeta → queda pendiente
-     if (metodoPago.equalsIgnoreCase("TRANSFERENCIA") ||
-         metodoPago.equalsIgnoreCase("TARJETA")) {
-
-         pedido.setEstadoPedido("PENDIENTE_VERIFICACION");
-     }
-
-     return pedidoRepository.save(pedido);
- }
 
 }

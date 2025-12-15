@@ -115,5 +115,15 @@ public class PedidoController {
     public Pedido crearDesdeCarrito(@RequestBody PedidoCarritoRequest request) {
         return pedidoService.crearPedidoDesdeCarrito(request);
     }
+    
+	// ============================================================
+	// 📊 ESTADÍSTICAS DE VENTAS - VENDEDOR
+	// ============================================================
+	@GetMapping("/estadisticas/vendedor/{idVendedor}")
+	public ResponseEntity<?> obtenerEstadisticasVendedor(@PathVariable Integer idVendedor) {
+
+		return ResponseEntity.ok(pedidoService.obtenerEstadisticasVendedor(idVendedor));
+ }
+
 
 }

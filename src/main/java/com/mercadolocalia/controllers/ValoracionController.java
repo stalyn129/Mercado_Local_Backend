@@ -30,4 +30,12 @@ public class ValoracionController {
     public List<ValoracionResponse> listarPorConsumidor(@PathVariable Integer idConsumidor) {
         return valoracionService.listarPorConsumidor(idConsumidor);
     }
+    
+    @GetMapping("/vendedor/{idVendedor}")
+    public List<ValoracionResponse> listarPorVendedor(
+            @PathVariable Integer idVendedor
+    ) {
+        return valoracionService.listarPorVendedor(idVendedor);
+    }
+
 }

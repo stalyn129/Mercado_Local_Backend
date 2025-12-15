@@ -1,6 +1,8 @@
 package com.mercadolocalia.services;
 
 import java.util.List;
+import java.util.Map;
+
 import org.springframework.web.multipart.MultipartFile;
 
 import com.mercadolocalia.dto.PedidoCarritoRequest;
@@ -39,4 +41,8 @@ public interface PedidoService {
     );
 
     Pedido crearPedidoDesdeCarrito(PedidoCarritoRequest request);
+    
+    Map<String, Object> obtenerEstadisticasVendedor(Integer idVendedor);
+
+
 }

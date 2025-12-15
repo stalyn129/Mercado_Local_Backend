@@ -85,6 +85,12 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.DELETE, "/productos/eliminar/**").hasRole("VENDEDOR")
                 .requestMatchers(HttpMethod.PUT, "/productos/estado/**").hasRole("VENDEDOR")
                 .requestMatchers(HttpMethod.GET, "/productos/vendedor/**").hasRole("VENDEDOR")
+                .requestMatchers("/pedidos/vendedor/**").hasRole("VENDEDOR")
+                .requestMatchers(HttpMethod.GET, "/valoraciones/vendedor/**").hasRole("VENDEDOR")
+                .requestMatchers("/pedidos/estadisticas/**").hasRole("VENDEDOR") 
+
+
+
 
                 // ============================
                 // 👤 CONSUMIDOR

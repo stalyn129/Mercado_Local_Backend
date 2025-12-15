@@ -90,6 +90,8 @@ public class ValoracionServiceImpl implements ValoracionService {
         // Producto
         res.setIdProducto(val.getProducto().getIdProducto());
         res.setNombreProducto(val.getProducto().getNombreProducto());
+        res.setImagenProducto(val.getProducto().getImagenProducto());
+
 
         // Consumidor
         res.setIdConsumidor(val.getConsumidor().getIdConsumidor());
@@ -100,4 +102,13 @@ public class ValoracionServiceImpl implements ValoracionService {
 
         return res;
     }
+    
+    @Override
+    public List<ValoracionResponse> listarPorVendedor(Integer idVendedor) {
+        return valoracionRepository.findByVendedor(idVendedor)
+                .stream()
+                .map(this::convertir)
+                .collect(Collectors.toList());
+    }
+
 }

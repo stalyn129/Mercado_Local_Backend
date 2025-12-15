@@ -15,6 +15,8 @@ public class ValoracionResponse {
     private Integer idConsumidor;
     private String nombreConsumidor;
 
+    private String imagenProducto;
+
     // ========== GETTERS & SETTERS ==========
 
     public Integer getIdValoracion() {
@@ -80,4 +82,13 @@ public class ValoracionResponse {
     public void setNombreConsumidor(String nombreConsumidor) {
         this.nombreConsumidor = nombreConsumidor;
     }
+    
+    public String getImagenProducto() {
+        return imagenProducto;
+    }
+
+    public void setImagenProducto(String imagenProducto) {
+        this.imagenProducto = imagenProducto;
+    }
+
 }

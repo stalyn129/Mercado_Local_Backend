@@ -12,4 +12,8 @@ public interface ValoracionService {
     List<ValoracionResponse> listarPorProducto(Integer idProducto);
 
     List<ValoracionResponse> listarPorConsumidor(Integer idConsumidor);
+    
+    List<ValoracionResponse> listarPorVendedor(Integer idVendedor);
+
+
 }
