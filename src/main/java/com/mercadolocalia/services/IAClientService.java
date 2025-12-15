@@ -30,24 +30,22 @@ public class IAClientService {
     public Object enviarMensajeChat(Long userId, String rol, String mensaje) {
         String url = IA_URL + "/chat";
 
-        var body = new java.util.HashMap<String, Object>();
+        Map<String, Object> body = new HashMap<>();
         body.put("id_usuario", userId);
         body.put("rol", rol);
         body.put("mensaje", mensaje);
 
         return restTemplate.postForObject(url, body, Object.class);
     }
-    
-    public Object recomendarPrecio(String nombre, String precio) {
+
+
+    public Object recomendarPrecio(String nombre, Double precio) {
+        String endpoint = IA_URL + "/precio/recomendar";
+
         Map<String, Object> body = new HashMap<>();
         body.put("nombre", nombre);
         body.put("precio", precio);
 
-        return restTemplate.postForObject(
-            IA_URL + "/precio/recomendar", 
-            body, 
-            Object.class
-        );
+        return restTemplate.postForObject(endpoint, body, Object.class);
     }
-
 }
