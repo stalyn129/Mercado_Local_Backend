@@ -42,7 +42,7 @@ public interface PedidoRepository extends JpaRepository<Pedido, Integer> {
 
 
     // ============================================================
-    // 🔥 NUEVO: VENTAS POR CATEGORÍA (REPORTES PROFESIONALES)
+    // VENTAS POR CATEGORÍA (REPORTES PROFESIONALES)
     // ============================================================
 
     @Query("""
@@ -58,4 +58,22 @@ public interface PedidoRepository extends JpaRepository<Pedido, Integer> {
         GROUP BY c.nombreCategoria
     """)
     List<Map<String, Object>> obtenerVentasPorCategoria();
+    
+    // ============================================================
+    // VENTAS MENSUALES
+    // ============================================================
+    
+    
+    @Query("""
+    	    SELECT 
+    	        MONTH(p.fechaPedido) as mes,
+    	        SUM(p.total) as total
+    	    FROM Pedido p
+    	    WHERE p.vendedor.idVendedor = :idVendedor
+    	      AND p.estadoPedido = 'COMPLETADO'
+    	    GROUP BY MONTH(p.fechaPedido)
+    	    ORDER BY MONTH(p.fechaPedido)
+    	""")
+    	List<Object[]> obtenerVentasMensualesPorVendedor(Integer idVendedor);
+
 }

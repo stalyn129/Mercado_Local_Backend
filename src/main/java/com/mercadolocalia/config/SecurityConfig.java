@@ -88,7 +88,7 @@ public class SecurityConfig {
                 .requestMatchers("/pedidos/vendedor/**").hasRole("VENDEDOR")
                 .requestMatchers(HttpMethod.GET, "/valoraciones/vendedor/**").hasRole("VENDEDOR")
                 .requestMatchers("/pedidos/estadisticas/**").hasRole("VENDEDOR") 
-
+                
 
 
 

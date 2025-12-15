@@ -380,6 +380,9 @@ public class PedidoServiceImpl implements PedidoService {
 		return pedidoRepository.save(pedido);
 	}
 
+	// ============================================================
+	// ESTADISTICAS DE VENTAS
+	// ============================================================
 	@Override
 	public Map<String, Object> obtenerEstadisticasVendedor(Integer idVendedor) {
 
@@ -405,5 +408,36 @@ public class PedidoServiceImpl implements PedidoService {
 	    return stats;
 	}
 
+
+	// ============================================================
+	// VENTAS MENSUALES
+	// ============================================================
+	
+	@Override
+	public List<Map<String, Object>> obtenerVentasMensuales(Integer idVendedor) {
+
+	    List<Object[]> resultados =
+	            pedidoRepository.obtenerVentasMensualesPorVendedor(idVendedor);
+
+	    String[] meses = {
+	        "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+	        "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+	    };
+
+	    List<Map<String, Object>> respuesta = new ArrayList<>();
+
+	    for (Object[] fila : resultados) {
+	        Integer mesNumero = ((Number) fila[0]).intValue();
+	        Double total = fila[1] != null ? ((Number) fila[1]).doubleValue() : 0.0;
+
+	        Map<String, Object> item = new HashMap<>();
+	        item.put("mes", meses[mesNumero - 1]);
+	        item.put("total", total);
+
+	        respuesta.add(item);
+	    }
+
+	    return respuesta;
+	}
 
 }

@@ -125,5 +125,15 @@ public class PedidoController {
 		return ResponseEntity.ok(pedidoService.obtenerEstadisticasVendedor(idVendedor));
  }
 
+	// ============================================================
+	// 📈 VENTAS MENSUALES - VENDEDOR
+	// ============================================================
+	@GetMapping("/estadisticas/mensuales/{idVendedor}")
+	public ResponseEntity<?> ventasMensuales(@PathVariable Integer idVendedor) {
+	    return ResponseEntity.ok(
+	        pedidoService.obtenerVentasMensuales(idVendedor)
+	    );
+	}
+
 
 }
