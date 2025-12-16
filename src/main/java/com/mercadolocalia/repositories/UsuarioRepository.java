@@ -12,4 +12,6 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Integer> {
 
     // 🔥 Necesario para AdminDashboardController
     List<Usuario> findTop5ByOrderByFechaRegistroDesc();
+    
+    
 }

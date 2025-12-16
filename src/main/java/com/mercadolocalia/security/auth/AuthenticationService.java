@@ -136,51 +136,69 @@ public class AuthenticationService {
         return response;
     }
 
-    // ============================================================
-    // 🔵 LOGIN
-    // ============================================================
-    public AuthResponse login(LoginRequest request) {
+ // ============================================================
+ // 🔵 LOGIN (NO DAÑA NADA EXISTENTE)
+ // ============================================================
+ public AuthResponse login(LoginRequest request) {
 
-        try {
-            authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(
-                            request.getCorreo(),
-                            request.getContrasena()
-                    )
-            );
-        } catch (Exception ex) {
-            throw new BadCredentialsException("Credenciales inválidas");
-        }
+     // 1️⃣ Autenticación (NO tocar)
+     try {
+         authenticationManager.authenticate(
+                 new UsernamePasswordAuthenticationToken(
+                         request.getCorreo(),
+                         request.getContrasena()
+                 )
+         );
+     } catch (Exception ex) {
+         throw new BadCredentialsException("Credenciales inválidas");
+     }
 
-        Usuario usuario = usuarioRepository.findByCorreo(request.getCorreo())
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+     // 2️⃣ Obtener usuario base (NO tocar)
+     Usuario usuario = usuarioRepository.findByCorreo(request.getCorreo())
+             .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
-        String tokenJwt = jwtService.generarToken(usuario);
+     // 3️⃣ Generar token JWT (NO tocar)
+     String tokenJwt = jwtService.generarToken(usuario);
 
-        Token token = new Token();
-        token.setUsuario(usuario);
-        token.setToken(tokenJwt);
-        token.setFechaExpiracion(LocalDateTime.now().plusDays(1));
-        tokenRepository.save(token);
+     Token token = new Token();
+     token.setUsuario(usuario);
+     token.setToken(tokenJwt);
+     token.setFechaExpiracion(LocalDateTime.now().plusDays(1));
+     tokenRepository.save(token);
 
-        // BUSCAR CONSUMIDOR O VENDEDOR RELACIONADO
-        Consumidor c = consumidorRepository.findByUsuario(usuario);
-        Integer idConsumidor = (c != null) ? c.getIdConsumidor() : null;
+     // 4️⃣ Buscar consumidor / vendedor (YA lo haces)
+     Consumidor c = consumidorRepository.findByUsuario(usuario);
+     Vendedor v = vendedorRepository.findByUsuario(usuario);
 
-        Vendedor v = vendedorRepository.findByUsuario(usuario);
-        Integer idVendedor = (v != null) ? v.getIdVendedor() : null;
+     // 5️⃣ Construir respuesta (AQUÍ ESTÁ LA CLAVE)
+     AuthResponse response = new AuthResponse();
+     response.setToken(tokenJwt);
+     response.setMensaje("✔ Login exitoso");
+     response.setIdUsuario(usuario.getIdUsuario());
+     response.setRol(usuario.getRol().getNombreRol());
 
+  // ================= CONSUMIDOR =================
+     if (c != null && "CONSUMIDOR".equalsIgnoreCase(usuario.getRol().getNombreRol())) {
+         response.setIdConsumidor(c.getIdConsumidor());
+         response.setNombre(usuario.getNombre());      // 👈 CORRECTO
+         response.setApellido(usuario.getApellido());  // 👈 CORRECTO
+         response.setCorreo(usuario.getCorreo());      // 👈 CORRECTO
+     }
 
-        // Construir respuesta
-        AuthResponse response = new AuthResponse();
-        response.setToken(tokenJwt);
-        response.setMensaje("✔ Login exitoso");
-        response.setIdUsuario(usuario.getIdUsuario());
-        response.setRol(usuario.getRol().getNombreRol());
-        response.setIdConsumidor(idConsumidor);
-        response.setIdVendedor(idVendedor);
+  // ================= VENDEDOR =================
+     if (v != null && "VENDEDOR".equalsIgnoreCase(usuario.getRol().getNombreRol())) {
+         response.setIdVendedor(v.getIdVendedor());
+         response.setNombre(
+                 v.getNombreEmpresa() != null
+                         ? v.getNombreEmpresa()
+                         : usuario.getNombre()
+         );
+         response.setApellido(usuario.getApellido());
+         response.setCorreo(usuario.getCorreo());
+     }
 
-        return response;
-    }
+     return response;
+ }
+
 
 }

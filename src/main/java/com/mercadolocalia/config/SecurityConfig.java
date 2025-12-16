@@ -56,6 +56,10 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/categorias/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/subcategorias/**").permitAll()
 
+             // 🔔 NOTIFICACIONES
+                .requestMatchers("/notificaciones/**")
+                .hasRole("CONSUMIDOR")
+
 
                 // ============================
                 // 🔥 PERMITIR MICRO SERVICIO IA

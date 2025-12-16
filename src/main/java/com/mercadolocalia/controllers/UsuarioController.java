@@ -7,6 +7,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import com.mercadolocalia.dto.UsuarioResponse;
+import com.mercadolocalia.dto.UsuarioPerfilDTO;
 import com.mercadolocalia.dto.UsuarioRequest;
 import com.mercadolocalia.entities.Usuario;
 import com.mercadolocalia.services.UsuarioService;
@@ -19,16 +20,11 @@ public class UsuarioController {
     private UsuarioService usuarioService;
 
     // ============================
-    // PERFIL (2 versiones)
+    // PERFIL
     // ============================
     @GetMapping("/usuarios/perfil")
-    public Usuario obtenerPerfilDesdeUsuarios(Authentication auth) {
-        return usuarioService.obtenerPerfil(auth.getName());
-    }
-
-    @GetMapping("/api/usuarios/perfil")
-    public Usuario obtenerPerfilDesdeApi(Authentication auth) {
-        return usuarioService.obtenerPerfil(auth.getName());
+    public UsuarioPerfilDTO obtenerPerfil(Authentication auth) {
+        return usuarioService.obtenerPerfilDTO(auth.getName());
     }
 
     // ============================

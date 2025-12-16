@@ -24,6 +24,7 @@ import com.mercadolocalia.repositories.DetallePedidoRepository;
 import com.mercadolocalia.repositories.PedidoRepository;
 import com.mercadolocalia.repositories.ProductoRepository;
 import com.mercadolocalia.repositories.VendedorRepository;
+import com.mercadolocalia.services.NotificacionService;
 import com.mercadolocalia.services.PedidoService;
 
 
@@ -40,10 +41,13 @@ public class PedidoServiceImpl implements PedidoService {
 	private VendedorRepository vendedorRepository;
 	@Autowired
 	private ProductoRepository productoRepository;
+	@Autowired
+	private NotificacionService notificacionService;
+
 
 
 	// ============================================================
-	// CREAR PEDIDO COMPLETO (CARRITO)
+	// CREAR PEDIDO COMPLETO 
 	// ============================================================
 	@Override
 	public Pedido crearPedido(PedidoRequest request) {
@@ -104,6 +108,13 @@ public class PedidoServiceImpl implements PedidoService {
 		pedido.setSubtotal(subtotal);
 		pedido.setIva(iva);
 		pedido.setTotal(total);
+		
+		// 🔔 Notificación: pedido creado
+		notificacionService.crearNotificacion(
+		        consumidor.getUsuario(),
+		        "🛒 Tu pedido #" + pedido.getIdPedido() + " fue creado correctamente",
+		        "PEDIDO"
+		);
 
 		return pedidoRepository.save(pedido);
 	}
@@ -158,11 +169,21 @@ public class PedidoServiceImpl implements PedidoService {
 	@Override
 	public Pedido cambiarEstado(Integer idPedido, String nuevoEstado) {
 
-		Pedido pedido = pedidoRepository.findById(idPedido)
-				.orElseThrow(() -> new RuntimeException("Pedido no encontrado"));
+	    Pedido pedido = pedidoRepository.findById(idPedido)
+	            .orElseThrow(() -> new RuntimeException("Pedido no encontrado"));
 
-		pedido.setEstadoPedido(nuevoEstado);
-		return pedidoRepository.save(pedido);
+	    pedido.setEstadoPedido(nuevoEstado);
+	    Pedido actualizado = pedidoRepository.save(pedido);
+
+	    // 🔔 Notificación por cambio de estado
+	    notificacionService.crearNotificacion(
+	            pedido.getConsumidor().getUsuario(),
+	            "📦 Tu pedido #" + pedido.getIdPedido() +
+	            " ahora está en estado: " + nuevoEstado,
+	            "PEDIDO"
+	    );
+
+	    return actualizado;
 	}
 
 	// ============================================================
@@ -221,6 +242,13 @@ public class PedidoServiceImpl implements PedidoService {
 		pedido.setSubtotal(subtotal);
 		pedido.setIva(iva);
 		pedido.setTotal(total);
+		
+		// 🔔 Notificación: compra inmediata
+		notificacionService.crearNotificacion(
+		    consumidor.getUsuario(),
+		    "⚡ Tu pedido #" + pedido.getIdPedido() + " fue creado con compra inmediata",
+		    "PEDIDO"
+		);
 
 		return pedidoRepository.save(pedido);
 	}
@@ -291,6 +319,14 @@ public class PedidoServiceImpl implements PedidoService {
 
 			pedido.setEstadoPedido("COMPLETADO");
 		}
+		
+		// 🔔 Notificación: pedido finalizado
+		notificacionService.crearNotificacion(
+		        pedido.getConsumidor().getUsuario(),
+		        "💳 Tu pedido #" + pedido.getIdPedido() +
+		        " fue finalizado con método: " + metodoPago,
+		        "PEDIDO"
+		);
 
 		return pedidoRepository.save(pedido);
 	}
@@ -351,6 +387,13 @@ public class PedidoServiceImpl implements PedidoService {
 		pedido.setSubtotal(subtotal);
 		pedido.setIva(iva);
 		pedido.setTotal(total);
+
+		// 🔔 Notificación: pedido creado desde carrito
+		notificacionService.crearNotificacion(
+		    consumidor.getUsuario(),
+		    "🛒 Tu pedido #" + pedido.getIdPedido() + " fue creado desde tu carrito",
+		    "PEDIDO"
+		);
 
 		return pedidoRepository.save(pedido);
 	}
@@ -439,5 +482,9 @@ public class PedidoServiceImpl implements PedidoService {
 
 	    return respuesta;
 	}
+	
+	
+	
+	
 
 }

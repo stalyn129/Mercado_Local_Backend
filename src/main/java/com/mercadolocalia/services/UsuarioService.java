@@ -3,12 +3,13 @@ package com.mercadolocalia.services;
 import java.util.List;
 
 import com.mercadolocalia.dto.UsuarioResponse;
+import com.mercadolocalia.dto.UsuarioPerfilDTO;
 import com.mercadolocalia.dto.UsuarioRequest;
 import com.mercadolocalia.entities.Usuario;
 
 public interface UsuarioService {
 
-    Usuario obtenerPerfil(String correo);
+	UsuarioPerfilDTO obtenerPerfilDTO(String correo);
 
     List<UsuarioResponse> listarUsuarios();
 
