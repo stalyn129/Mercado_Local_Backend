@@ -10,6 +10,7 @@ import org.springframework.web.multipart.MultipartFile;
 import com.mercadolocalia.dto.PedidoCarritoRequest;
 import com.mercadolocalia.dto.PedidoRequest;
 import com.mercadolocalia.entities.Pedido;
+import com.mercadolocalia.repositories.PedidoRepository;
 import com.mercadolocalia.entities.DetallePedido;
 import com.mercadolocalia.services.PedidoService;
 
@@ -71,7 +72,7 @@ public class PedidoController {
     }
 
     // ============================================================
-    // COMPRAR AHORA (1 SOLO PRODUCTO)
+    // COMPRAR AHORA
     // ============================================================
     @PostMapping("/comprar-ahora")
     public Pedido comprarAhora(@RequestBody PedidoRequest request) {
@@ -79,7 +80,7 @@ public class PedidoController {
     }
 
     // ============================================================
-    // FINALIZAR COMPRA — MODO SIMPLE (PUT)
+    // FINALIZAR COMPRA SIMPLE
     // ============================================================
     @PutMapping("/finalizar/{idPedido}")
     public Pedido finalizarPedidoSimple(
@@ -90,7 +91,7 @@ public class PedidoController {
     }
 
     // ============================================================
-    // FINALIZAR COMPRA — MODO COMPLETO (POST multipart/form-data)
+    // FINALIZAR COMPRA COMPLETA
     // ============================================================
     @PostMapping(value = "/finalizar/{idPedido}", consumes = "multipart/form-data")
     public Pedido finalizarPedidoCompleto(
@@ -115,25 +116,24 @@ public class PedidoController {
     public Pedido crearDesdeCarrito(@RequestBody PedidoCarritoRequest request) {
         return pedidoService.crearPedidoDesdeCarrito(request);
     }
-    
-	// ============================================================
-	// 📊 ESTADÍSTICAS DE VENTAS - VENDEDOR
-	// ============================================================
-	@GetMapping("/estadisticas/vendedor/{idVendedor}")
-	public ResponseEntity<?> obtenerEstadisticasVendedor(@PathVariable Integer idVendedor) {
 
-		return ResponseEntity.ok(pedidoService.obtenerEstadisticasVendedor(idVendedor));
- }
+    // ============================================================
+    // 📊 ESTADÍSTICAS VENDEDOR
+    // ============================================================
+    @GetMapping("/estadisticas/vendedor/{idVendedor}")
+    public ResponseEntity<?> obtenerEstadisticasVendedor(@PathVariable Integer idVendedor) {
+        return ResponseEntity.ok(
+            pedidoService.obtenerEstadisticasVendedor(idVendedor)
+        );
+    }
 
-	// ============================================================
-	// 📈 VENTAS MENSUALES - VENDEDOR
-	// ============================================================
-	@GetMapping("/estadisticas/mensuales/{idVendedor}")
-	public ResponseEntity<?> ventasMensuales(@PathVariable Integer idVendedor) {
-	    return ResponseEntity.ok(
-	        pedidoService.obtenerVentasMensuales(idVendedor)
-	    );
-	}
-
-
+    // ============================================================
+    // 📈 VENTAS MENSUALES
+    // ============================================================
+    @GetMapping("/estadisticas/mensuales/{idVendedor}")
+    public ResponseEntity<?> ventasMensuales(@PathVariable Integer idVendedor) {
+        return ResponseEntity.ok(
+            pedidoService.obtenerVentasMensuales(idVendedor)
+        );
+    }
 }

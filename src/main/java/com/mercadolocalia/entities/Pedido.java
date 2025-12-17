@@ -14,10 +14,6 @@ public class Pedido {
     @Column(name = "id_pedido")
     private Integer idPedido;
 
-    // ============================================================
-    // RELACIONES
-    // ============================================================
-
     @ManyToOne
     @JoinColumn(name = "id_consumidor", nullable = false)
     private Consumidor consumidor;
@@ -33,11 +29,7 @@ public class Pedido {
         fetch = FetchType.LAZY
     )
     private List<DetallePedido> detalles = new ArrayList<>();
-
-    // ============================================================
-    // CAMPOS
-    // ============================================================
-
+    
     @Column(name = "fecha_pedido")
     private LocalDateTime fechaPedido;
 
@@ -61,10 +53,6 @@ public class Pedido {
 
     @Column(name = "datos_tarjeta", nullable = true)
     private String datosTarjeta;
-
-    // ============================================================
-    // GETTERS & SETTERS
-    // ============================================================
 
     public Integer getIdPedido() {
         return idPedido;

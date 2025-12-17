@@ -76,4 +76,7 @@ public interface PedidoRepository extends JpaRepository<Pedido, Integer> {
     	""")
     	List<Object[]> obtenerVentasMensualesPorVendedor(Integer idVendedor);
 
+    	List<Pedido> findByConsumidor_IdConsumidor(Integer idConsumidor);
+
+
 }
