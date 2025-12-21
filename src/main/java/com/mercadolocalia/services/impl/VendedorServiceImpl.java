@@ -66,8 +66,10 @@ public class VendedorServiceImpl implements VendedorService {
         Usuario usuario = usuarioRepository.findById(idUsuario)
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
-        return vendedorRepository.findByUsuario(usuario);
+        return vendedorRepository.findByUsuario(usuario)
+                .orElseThrow(() -> new RuntimeException("El usuario no es vendedor"));
     }
+
 
     // ============================================================
     // OBTENER POR ID VENDEDOR

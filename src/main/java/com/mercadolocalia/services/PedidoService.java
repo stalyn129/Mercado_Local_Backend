@@ -26,10 +26,8 @@ public interface PedidoService {
 
     Pedido comprarAhora(PedidoRequest request);
 
-    // 🔵 SIMPLE -> PARA EL ENDPOINT PUT /finalizar/{idPedido}
     Pedido finalizarPedido(Integer idPedido, String metodoPago);
 
-    // 🔵 COMPLEJO -> PARA FORM-DATA (comprobante, tarjeta, etc.)
     Pedido finalizarPedido(
         Integer idPedido,
         String metodoPago,
@@ -41,11 +39,8 @@ public interface PedidoService {
     );
 
     Pedido crearPedidoDesdeCarrito(PedidoCarritoRequest request);
-    
+
     Map<String, Object> obtenerEstadisticasVendedor(Integer idVendedor);
 
     List<Map<String, Object>> obtenerVentasMensuales(Integer idVendedor);
-
-    
-
 }

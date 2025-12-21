@@ -78,8 +78,13 @@ public class ProductoServiceImpl implements ProductoService {
         } else if (r.getIdUsuario() != null) {
             Usuario u = usuarioRepository.findById(r.getIdUsuario())
                     .orElseThrow(() -> new RuntimeException("Usuario no existe"));
-            p.setVendedor(vendedorRepository.findByUsuario(u));
+
+            Vendedor v = vendedorRepository.findByUsuario(u)
+                    .orElseThrow(() -> new RuntimeException("El usuario no es vendedor"));
+
+            p.setVendedor(v);
         }
+
     }
 
  // ================== 🔥 OPCIÓN A — IMAGEN COMO URL ==================

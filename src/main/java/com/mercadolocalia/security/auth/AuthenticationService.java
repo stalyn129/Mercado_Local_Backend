@@ -4,11 +4,13 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.mercadolocalia.dto.AuthResponse;
 import com.mercadolocalia.dto.LoginRequest;
@@ -168,7 +170,7 @@ public class AuthenticationService {
 
      // 4️⃣ Buscar consumidor / vendedor (YA lo haces)
      Consumidor c = consumidorRepository.findByUsuario(usuario);
-     Vendedor v = vendedorRepository.findByUsuario(usuario);
+     Vendedor v = vendedorRepository.findByUsuario(usuario).orElse(null);
 
      // 5️⃣ Construir respuesta (AQUÍ ESTÁ LA CLAVE)
      AuthResponse response = new AuthResponse();

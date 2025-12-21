@@ -65,7 +65,8 @@ public class UsuarioServiceImpl implements UsuarioService {
 
         if (u.getRol().getNombreRol().equals("VENDEDOR")) {
 
-            Vendedor v = vendedorRepository.findByUsuario(u);
+        	Vendedor v = vendedorRepository.findByUsuario(u)
+        	        .orElseThrow(() -> new RuntimeException("El usuario no es vendedor"));
             if (v == null) {
                 throw new RuntimeException("Vendedor no encontrado");
             }

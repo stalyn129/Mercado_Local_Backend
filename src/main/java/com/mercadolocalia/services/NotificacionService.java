@@ -7,7 +7,12 @@ import java.util.List;
 
 public interface NotificacionService {
 
-    void crearNotificacion(Usuario usuario, String mensaje, String tipo);
+    void crearNotificacion(
+            Usuario usuario,
+            String mensaje,
+            String tipo,
+            Integer idPedido
+        );
 
     List<Notificacion> obtenerNoLeidas(Usuario usuario);
 

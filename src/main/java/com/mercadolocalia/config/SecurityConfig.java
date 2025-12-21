@@ -58,18 +58,14 @@ public class SecurityConfig {
 
              // 🔔 NOTIFICACIONES
                 .requestMatchers("/notificaciones/**")
-                .hasRole("CONSUMIDOR")
+                .hasAnyRole("CONSUMIDOR", "VENDEDOR", "ADMIN")
+
 
 
                 // ============================
                 // 🔥 PERMITIR MICRO SERVICIO IA
                 // ============================
                 .requestMatchers("/api/ia/**").permitAll()
-                // Esto habilita:
-                // - /api/ia/precio/{id}
-                // - /api/ia/demanda/{id}
-                // - /api/ia/recomendar/{id}
-                // - /api/ia/chat   ✔✔✔
 
 
                 // ============================

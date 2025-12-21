@@ -16,6 +16,10 @@ public class Notificacion {
     @JoinColumn(name = "id_usuario", nullable = false)
     private Usuario usuario;
 
+    // 👉 NUEVO
+    @Column(name = "id_pedido")
+    private Integer idPedido;
+
     private String mensaje;
     private String tipo;
     private Boolean leido = false;
@@ -33,6 +37,15 @@ public class Notificacion {
 
     public void setUsuario(Usuario usuario) {
         this.usuario = usuario;
+    }
+
+    // 👉 NUEVO
+    public Integer getIdPedido() {
+        return idPedido;
+    }
+
+    public void setIdPedido(Integer idPedido) {
+        this.idPedido = idPedido;
     }
 
     public String getMensaje() {

@@ -16,12 +16,13 @@ public class NotificacionServiceImpl implements NotificacionService {
     private NotificacionRepository notificacionRepository;
 
     @Override
-    public void crearNotificacion(Usuario usuario, String mensaje, String tipo) {
-        Notificacion n = new Notificacion();
-        n.setUsuario(usuario);
-        n.setMensaje(mensaje);
-        n.setTipo(tipo);
-        n.setLeido(false);
+    public void crearNotificacion(Usuario usuario, String mensaje, String tipo, Integer idPedido) {
+    	 Notificacion n = new Notificacion();
+         n.setUsuario(usuario);
+         n.setMensaje(mensaje);
+         n.setTipo(tipo);
+         n.setIdPedido(idPedido);
+         n.setLeido(false);
         notificacionRepository.save(n);
     }
 
