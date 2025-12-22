@@ -198,4 +198,37 @@ public class PedidoController {
             pedidoService.obtenerVentasMensuales(idVendedor)
         );
     }
+    
+ // ============================================================
+ // 🔒 DETALLE DE PEDIDO (CONSUMIDOR)
+ // ============================================================
+ @GetMapping("/{idPedido}")
+ @PreAuthorize("hasRole('CONSUMIDOR')")
+ public ResponseEntity<?> obtenerPedidoConsumidor(
+         @PathVariable Integer idPedido,
+         Authentication authentication
+ ) {
+     Usuario usuario = usuarioRepository
+         .findByCorreo(authentication.getName())
+         .orElseThrow(() -> new ResponseStatusException(
+             HttpStatus.UNAUTHORIZED, "Usuario no autenticado"
+         ));
+
+     Pedido pedido = pedidoRepository.findById(idPedido)
+         .orElseThrow(() -> new ResponseStatusException(
+             HttpStatus.NOT_FOUND, "Pedido no encontrado"
+         ));
+
+     // 🔐 VALIDACIÓN CLAVE
+     if (!pedido.getConsumidor().getUsuario().getIdUsuario()
+             .equals(usuario.getIdUsuario())) {
+         throw new ResponseStatusException(
+             HttpStatus.FORBIDDEN,
+             "No autorizado para ver este pedido"
+         );
+     }
+
+     return ResponseEntity.ok(pedido);
+ }
+
 }
