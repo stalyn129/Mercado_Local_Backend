@@ -23,6 +23,9 @@ public interface PedidoRepository extends JpaRepository<Pedido, Integer> {
     List<Pedido> findTop10ByVendedorOrderByFechaPedidoDesc(Vendedor vendedor);
 
     Integer countByVendedor(Vendedor vendedor);
+    
+    int countByConsumidor_IdConsumidor(Integer idConsumidor);
+
 
     @Query("SELECT SUM(p.total) FROM Pedido p WHERE p.vendedor.idVendedor = :vendedorId")
     Double sumarIngresosPorVendedor(Integer vendedorId);

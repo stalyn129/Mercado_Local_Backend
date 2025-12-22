@@ -55,6 +55,8 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/productos/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/categorias/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/subcategorias/**").permitAll()
+                .requestMatchers("/chatbot/**").permitAll()
+
 
              // 🔔 NOTIFICACIONES
                 .requestMatchers("/notificaciones/**")

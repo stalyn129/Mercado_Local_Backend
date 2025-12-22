@@ -12,4 +12,7 @@ public interface SubcategoriaRepository extends JpaRepository<Subcategoria, Inte
     boolean existsByNombreSubcategoria(String nombreSubcategoria);
 
     List<Subcategoria> findByCategoria(Categoria categoria);
+    
+    boolean existsByNombreSubcategoriaContainingIgnoreCase(String nombre);
+
 }
