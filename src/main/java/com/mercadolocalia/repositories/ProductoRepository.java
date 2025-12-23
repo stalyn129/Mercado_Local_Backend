@@ -5,8 +5,10 @@ import java.util.Map;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.data.domain.Pageable;
 
+import com.mercadolocalia.dto.ProductoPublicDTO;
 import com.mercadolocalia.entities.Producto;
 import com.mercadolocalia.entities.Subcategoria;
 import com.mercadolocalia.entities.Vendedor;
@@ -27,6 +29,7 @@ public interface ProductoRepository extends JpaRepository<Producto, Integer> {
     
     List<Producto> findBySubcategoria_NombreSubcategoriaContainingIgnoreCase(String nombre);
 
+    
 
     @Query("SELECT COUNT(p) FROM Producto p WHERE p.vendedor.idVendedor = :id AND p.estado = 'Disponible'")
     Integer contarDisponiblesPorVendedor(Integer id);
@@ -58,4 +61,28 @@ public interface ProductoRepository extends JpaRepository<Producto, Integer> {
         FROM Producto p
     """)
     List<Map<String, Object>> obtenerStockProductos();
+    
+    
+    @Query("""
+    	    SELECT new com.mercadolocalia.dto.ProductoPublicDTO(
+    	        p.idProducto,
+    	        p.nombreProducto,
+    	        p.precioProducto,
+    	        p.imagenProducto,
+    	        s.nombreSubcategoria,
+    	        COALESCE(AVG(v.calificacion), 0),
+    	        COUNT(v),
+    	        p.vendedor.idVendedor
+    	    )
+    	    FROM Producto p
+    	    LEFT JOIN p.subcategoria s
+    	    LEFT JOIN p.valoraciones v
+    	    WHERE p.vendedor.idVendedor = :idVendedor
+    	      AND p.estado = 'Disponible'
+    	    GROUP BY p.idProducto, s.nombreSubcategoria, p.vendedor.idVendedor
+    	""")
+    	List<ProductoPublicDTO> obtenerProductosPublicosPorVendedor(
+    	        @Param("idVendedor") Integer idVendedor
+    	);
+
 }

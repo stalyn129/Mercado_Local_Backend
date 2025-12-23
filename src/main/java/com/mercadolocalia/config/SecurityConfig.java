@@ -55,19 +55,25 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/productos/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/categorias/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/subcategorias/**").permitAll()
-                .requestMatchers("/chatbot/**").permitAll()
+                .requestMatchers("/api/public/**").permitAll()
+
+
 
 
              // 🔔 NOTIFICACIONES
                 .requestMatchers("/notificaciones/**")
-                .hasAnyRole("CONSUMIDOR", "VENDEDOR", "ADMIN")
-
+                .hasRole("CONSUMIDOR")
 
 
                 // ============================
                 // 🔥 PERMITIR MICRO SERVICIO IA
                 // ============================
                 .requestMatchers("/api/ia/**").permitAll()
+                // Esto habilita:
+                // - /api/ia/precio/{id}
+                // - /api/ia/demanda/{id}
+                // - /api/ia/recomendar/{id}
+                // - /api/ia/chat   ✔✔✔
 
 
                 // ============================
