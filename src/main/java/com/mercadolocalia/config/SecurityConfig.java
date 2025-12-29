@@ -56,6 +56,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/categorias/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/subcategorias/**").permitAll()
                 .requestMatchers("/api/public/**").permitAll()
+                .requestMatchers("/chatbot").authenticated()
 
 
 
