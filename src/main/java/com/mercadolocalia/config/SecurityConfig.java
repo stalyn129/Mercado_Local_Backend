@@ -13,6 +13,8 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import static org.springframework.security.config.Customizer.withDefaults;
+
 
 @Configuration
 public class SecurityConfig {
@@ -29,7 +31,7 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 
         http
-            .cors(cors -> {})
+        	.cors(withDefaults())
             .csrf(csrf -> csrf.disable())
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
@@ -113,6 +115,13 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/pedidos/comprar-ahora").hasRole("CONSUMIDOR")
                 .requestMatchers(HttpMethod.PUT, "/pedidos/finalizar/**").hasRole("CONSUMIDOR")
                 .requestMatchers(HttpMethod.GET, "/pedidos/**").hasRole("CONSUMIDOR")
+                
+             // 🔴 ESTA LÍNEA ES LA CLAVE
+                .requestMatchers(HttpMethod.POST, "/carrito/agregar").hasRole("CONSUMIDOR")
+
+                .requestMatchers("/carrito/**").authenticated()
+
+
 
                 // ============================
                 // 🔐 CUALQUIER OTRA RUTA REQUIERE TOKEN
