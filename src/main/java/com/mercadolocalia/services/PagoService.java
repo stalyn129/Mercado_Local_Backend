@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 import com.mercadolocalia.dto.PagoRequest;
 import com.mercadolocalia.dto.PagoTarjetaRequest;
 import com.mercadolocalia.entities.EstadoPago;
+import com.mercadolocalia.entities.EstadoPedido;
 import com.mercadolocalia.entities.MetodoPago;
 import com.mercadolocalia.entities.Pago;
 import com.mercadolocalia.repositories.PagoRepository;
@@ -14,154 +15,117 @@ import com.mercadolocalia.repositories.PedidoRepository;
 @Service
 public class PagoService {
 
-    @Autowired
-    private PagoRepository pagoRepository;
+	@Autowired
+	private PagoRepository pagoRepository;
 
-    @Autowired
-    private PedidoRepository pedidoRepository;
+	@Autowired
+	private PedidoRepository pedidoRepository;
 
-    // =========================================================
-    // PAGO GENERAL (EFECTIVO / TRANSFERENCIA)
-    // =========================================================
-    public Pago procesarPago(PagoRequest request) {
+	// =========================================================
+	// PAGO GENERAL (EFECTIVO / TRANSFERENCIA)
+	// =========================================================
+	public Pago procesarPago(PagoRequest request) {
 
-        EstadoPago estadoPago;
+		EstadoPago estadoPago;
+		EstadoPedido estadoPedido;
 
-        switch (request.getMetodoPago()) {
-            case EFECTIVO:
-                estadoPago = EstadoPago.PENDIENTE;
-                break;
+		switch (request.getMetodoPago()) {
 
-            case TRANSFERENCIA:
-                estadoPago = EstadoPago.PENDIENTE_VERIFICACION;
-                break;
+		case EFECTIVO:
+			estadoPago = EstadoPago.PENDIENTE;
+			estadoPedido = EstadoPedido.PROCESANDO;
+			break;
 
-            default:
-                throw new IllegalArgumentException(
-                    "Este método requiere otro endpoint"
-                );
-        }
+		case TRANSFERENCIA:
+			estadoPago = EstadoPago.PENDIENTE_VERIFICACION;
+			estadoPedido = EstadoPedido.PENDIENTE_VERIFICACION;
+			break;
 
-        Pago pago = crearPagoBase(
-            request.getIdPedido(),
-            request.getIdConsumidor(),
-            request.getMonto(),
-            request.getMetodoPago(),
-            estadoPago
-        );
+		default:
+			throw new IllegalArgumentException("Este método requiere otro endpoint");
+		}
 
-        actualizarEstadoPedido(request.getIdPedido(), estadoPago);
+		Pago pago = crearPagoBase(request.getIdPedido(), request.getIdConsumidor(), request.getMonto(),
+				request.getMetodoPago(), estadoPago);
 
-        return pago;
-    }
+		actualizarEstadoPedido(request.getIdPedido(), estadoPedido);
 
-    // =========================================================
-    // PAGO CON TARJETA (SIMULADO)
-    // =========================================================
-    public Pago procesarPagoTarjetaSimulado(PagoTarjetaRequest request) {
+		return pago;
+	}
 
-        validarDatosTarjeta(request);
+//=========================================================
+//PAGO CON TARJETA (SIMULADO)
+//=========================================================
+	public Pago procesarPagoTarjetaSimulado(PagoTarjetaRequest request) {
 
-        String tarjeta = request.getNumeroTarjeta().replace(" ", "");
+		validarDatosTarjeta(request);
 
-        // 🔥 TARJETAS QUEMADAS (SIMULACIÓN)
-        switch (tarjeta) {
+		String tarjeta = request.getNumeroTarjeta().replace(" ", "");
 
-            case "4111111111111111":
-                // ✅ Tarjeta aprobada
-                Pago pagoAprobado = crearPagoBase(
-                    request.getIdPedido(),
-                    request.getIdConsumidor(),
-                    request.getMonto(),
-                    MetodoPago.TARJETA,
-                    EstadoPago.PAGADO
-                );
+		switch (tarjeta) {
 
-                actualizarEstadoPedido(
-                    request.getIdPedido(),
-                    EstadoPago.PAGADO
-                );
+		// ✅ TARJETA APROBADA
+		case "4111111111111111":
 
-                return pagoAprobado;
+			Pago pagoAprobado = crearPagoBase(request.getIdPedido(), request.getIdConsumidor(), request.getMonto(),
+					MetodoPago.TARJETA, EstadoPago.PAGADO);
 
-            case "4000000000000002":
-                throw new RuntimeException("Fondos insuficientes");
+			// 🔥 PEDIDO COMPLETADO
+			actualizarEstadoPedido(request.getIdPedido(), EstadoPedido.COMPLETADO);
 
-            case "4000000000009995":
-                throw new RuntimeException("Tarjeta bloqueada");
+			return pagoAprobado;
 
-            default:
-                throw new RuntimeException("Tarjeta inválida o no reconocida");
-        }
-    }
+		// ❌ ERRORES SIMULADOS
+		case "4000000000000002":
+			throw new RuntimeException("Fondos insuficientes");
 
-    // =========================================================
-    // MÉTODOS PRIVADOS DE APOYO
-    // =========================================================
+		case "4000000000009995":
+			throw new RuntimeException("Tarjeta bloqueada");
 
-    private Pago crearPagoBase(
-        Integer idPedido,
-        Integer idConsumidor,
-        Double monto,
-        MetodoPago metodo,
-        EstadoPago estado
-    ) {
-        Pago pago = new Pago();
-        pago.setIdPedido(idPedido);
-        pago.setIdConsumidor(idConsumidor);
-        pago.setMonto(monto);
-        pago.setMetodo(metodo);
-        pago.setEstado(estado);
+		default:
+			throw new RuntimeException("Tarjeta inválida o no reconocida");
+		}
+	}
 
-        return pagoRepository.save(pago);
-    }
+	// =========================================================
+	// MÉTODOS PRIVADOS DE APOYO
+	// =========================================================
 
-    private void actualizarEstadoPedido(
-        Integer idPedido,
-        EstadoPago estadoPago
-    ) {
-        pedidoRepository.findById(idPedido).ifPresent(pedido -> {
+	private Pago crearPagoBase(Integer idPedido, Integer idConsumidor, Double monto, MetodoPago metodo,
+			EstadoPago estado) {
+		Pago pago = new Pago();
+		pago.setIdPedido(idPedido);
+		pago.setIdConsumidor(idConsumidor);
+		pago.setMonto(monto);
+		pago.setMetodo(metodo);
+		pago.setEstado(estado);
 
-            switch (estadoPago) {
-                case PAGADO:
-                    pedido.setEstadoPedido("PAGADO");
-                    break;
+		return pagoRepository.save(pago);
+	}
 
-                case PENDIENTE:
-                    pedido.setEstadoPedido("PENDIENTE_PAGO");
-                    break;
+	private void actualizarEstadoPedido(Integer idPedido, EstadoPedido nuevoEstado) {
+		pedidoRepository.findById(idPedido).ifPresent(pedido -> {
+			pedido.setEstadoPedido(nuevoEstado);
+			pedidoRepository.save(pedido);
+		});
+	}
 
-                case PENDIENTE_VERIFICACION:
-                    pedido.setEstadoPedido("PENDIENTE_VERIFICACION");
-                    break;
+	private void validarDatosTarjeta(PagoTarjetaRequest request) {
 
-                default:
-                    pedido.setEstadoPedido("PENDIENTE_PAGO");
-            }
+		if (request.getNumeroTarjeta() == null || request.getNumeroTarjeta().replace(" ", "").length() < 13) {
+			throw new RuntimeException("Número de tarjeta inválido");
+		}
 
-            pedidoRepository.save(pedido);
-        });
-    }
+		if (request.getCvv() == null || request.getCvv().length() < 3) {
+			throw new RuntimeException("CVV inválido");
+		}
 
-    private void validarDatosTarjeta(PagoTarjetaRequest request) {
+		if (request.getFechaExpiracion() == null || request.getFechaExpiracion().isEmpty()) {
+			throw new RuntimeException("Fecha de expiración inválida");
+		}
 
-        if (request.getNumeroTarjeta() == null ||
-            request.getNumeroTarjeta().replace(" ", "").length() < 13) {
-            throw new RuntimeException("Número de tarjeta inválido");
-        }
-
-        if (request.getCvv() == null || request.getCvv().length() < 3) {
-            throw new RuntimeException("CVV inválido");
-        }
-
-        if (request.getFechaExpiracion() == null ||
-            request.getFechaExpiracion().isEmpty()) {
-            throw new RuntimeException("Fecha de expiración inválida");
-        }
-
-        if (request.getTitular() == null ||
-            request.getTitular().isEmpty()) {
-            throw new RuntimeException("Titular inválido");
-        }
-    }
+		if (request.getTitular() == null || request.getTitular().isEmpty()) {
+			throw new RuntimeException("Titular inválido");
+		}
+	}
 }

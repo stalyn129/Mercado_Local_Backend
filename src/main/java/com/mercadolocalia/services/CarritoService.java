@@ -11,4 +11,6 @@ public interface CarritoService {
     String eliminarItem(Integer idItem);
 
     String vaciarCarrito(Integer idConsumidor);
+    
+    void actualizarCantidad(Integer idItem, Integer cantidad);
 }

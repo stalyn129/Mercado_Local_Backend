@@ -35,6 +35,8 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
+            		
+            		.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
                 // ============================
                 // 🔓 PÚBLICO
@@ -112,16 +114,12 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/favoritos/agregar").hasRole("CONSUMIDOR")
                 .requestMatchers(HttpMethod.GET, "/favoritos/listar/**").hasRole("CONSUMIDOR")
 
-                .requestMatchers(HttpMethod.POST, "/pedidos/comprar-ahora").hasRole("CONSUMIDOR")
-                .requestMatchers(HttpMethod.PUT, "/pedidos/finalizar/**").hasRole("CONSUMIDOR")
-                .requestMatchers(HttpMethod.GET, "/pedidos/**").hasRole("CONSUMIDOR")
+                .requestMatchers(HttpMethod.POST, "/pedidos/checkout").hasRole("CONSUMIDOR")
+                .requestMatchers("/pedidos/**").hasRole("CONSUMIDOR")
                 
-             // 🔴 ESTA LÍNEA ES LA CLAVE
                 .requestMatchers(HttpMethod.POST, "/carrito/agregar").hasRole("CONSUMIDOR")
 
                 .requestMatchers("/carrito/**").authenticated()
-
-
 
                 // ============================
                 // 🔐 CUALQUIER OTRA RUTA REQUIERE TOKEN

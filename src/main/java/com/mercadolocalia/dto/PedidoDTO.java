@@ -4,29 +4,32 @@ import java.time.LocalDateTime;
 
 public class PedidoDTO {
 
-    private Integer id;
-    private String numero;
+    private Integer idPedido;
+    private String numeroPedido;      // derivado del id
     private String clienteNombre;
+    private String vendedorNombre;
     private String estado;
+    private Double subtotal;
+    private Double iva;
     private Double total;
-    private LocalDateTime fecha;
+    private LocalDateTime fechaPedido;
 
     // GETTERS & SETTERS
 
-    public Integer getId() {
-        return id;
+    public Integer getIdPedido() {
+        return idPedido;
     }
 
-    public void setId(Integer id) {
-        this.id = id;
+    public void setIdPedido(Integer idPedido) {
+        this.idPedido = idPedido;
     }
 
-    public String getNumero() {
-        return numero;
+    public String getNumeroPedido() {
+        return numeroPedido;
     }
 
-    public void setNumero(String numero) {
-        this.numero = numero;
+    public void setNumeroPedido(String numeroPedido) {
+        this.numeroPedido = numeroPedido;
     }
 
     public String getClienteNombre() {
@@ -37,12 +40,36 @@ public class PedidoDTO {
         this.clienteNombre = clienteNombre;
     }
 
+    public String getVendedorNombre() {
+        return vendedorNombre;
+    }
+
+    public void setVendedorNombre(String vendedorNombre) {
+        this.vendedorNombre = vendedorNombre;
+    }
+
     public String getEstado() {
         return estado;
     }
 
     public void setEstado(String estado) {
         this.estado = estado;
+    }
+
+    public Double getSubtotal() {
+        return subtotal;
+    }
+
+    public void setSubtotal(Double subtotal) {
+        this.subtotal = subtotal;
+    }
+
+    public Double getIva() {
+        return iva;
+    }
+
+    public void setIva(Double iva) {
+        this.iva = iva;
     }
 
     public Double getTotal() {
@@ -53,11 +80,11 @@ public class PedidoDTO {
         this.total = total;
     }
 
-    public LocalDateTime getFecha() {
-        return fecha;
+    public LocalDateTime getFechaPedido() {
+        return fechaPedido;
     }
 
-    public void setFecha(LocalDateTime fecha) {
-        this.fecha = fecha;
+    public void setFechaPedido(LocalDateTime fechaPedido) {
+        this.fechaPedido = fechaPedido;
     }
 }

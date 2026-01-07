@@ -16,6 +16,8 @@ import com.mercadolocalia.repositories.ConsumidorRepository;
 import com.mercadolocalia.repositories.ProductoRepository;
 import com.mercadolocalia.services.CarritoService;
 
+import jakarta.transaction.Transactional;
+
 @Service
 public class CarritoServiceImpl implements CarritoService {
 
@@ -30,6 +32,8 @@ public class CarritoServiceImpl implements CarritoService {
 
     @Autowired
     private ProductoRepository productoRepository;
+    
+
 
     // ==================================================
     // 🔒 MÉTODO INTERNO (NO SE EXPONE AL CONTROLLER)
@@ -134,6 +138,27 @@ public class CarritoServiceImpl implements CarritoService {
         );
 
         return "Carrito vaciado.";
+    }
+    
+    // ==================================================
+    // ACTUALIZAR CANTIDAD
+    // ==================================================
+    
+    @Override
+    @Transactional
+    public void actualizarCantidad(Integer idItem, Integer cantidad) {
+
+        CarritoItem item = carritoItemRepository.findById(idItem)
+            .orElseThrow(() -> new RuntimeException("Item de carrito no encontrado"));
+
+        if (cantidad <= 0) {
+            // regla de negocio: cantidad 0 = eliminar
+            carritoItemRepository.delete(item);	
+            return;
+        }
+
+        item.setCantidad(cantidad);
+        carritoItemRepository.save(item);
     }
 
 

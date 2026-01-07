@@ -67,4 +67,17 @@ public class CarritoController {
 
         return response;
     }
+    
+    // ==================================================
+    // ACTUALIZAR CANTIDAD
+    // ==================================================
+    
+    @PutMapping("/item/{idItem}/cantidad")
+    public void actualizarCantidad(
+        @PathVariable Integer idItem,
+        @RequestParam Integer cantidad
+    ) {
+        carritoService.actualizarCantidad(idItem, cantidad);
+    }
+
 }

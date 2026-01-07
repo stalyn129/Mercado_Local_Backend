@@ -116,19 +116,23 @@ public class VendedorServiceImpl implements VendedorService {
         Vendedor vendedor = vendedorRepository.findById(vendedorId)
                 .orElseThrow(() -> new RuntimeException("Vendedor no encontrado"));
 
-        List<Pedido> pedidos = pedidoRepository.findTop10ByVendedorOrderByFechaPedidoDesc(vendedor);
+        List<Pedido> pedidos =
+                pedidoRepository.findTop10ByVendedorOrderByFechaPedidoDesc(vendedor);
 
         return pedidos.stream()
                 .map(p -> {
                     PedidoDTO dto = new PedidoDTO();
 
-                    dto.setId(p.getIdPedido());
-                    dto.setNumero(String.valueOf(p.getIdPedido()));
-                    dto.setEstado(p.getEstadoPedido());
-                    dto.setTotal(p.getTotal());
-                    dto.setFecha(p.getFechaPedido());
+                    dto.setIdPedido(p.getIdPedido());
+                    dto.setNumeroPedido("PED-" + p.getIdPedido());
 
-                    // Cliente asociado al pedido
+                    // ✅ ENUM → String
+                    dto.setEstado(p.getEstadoPedido().name());
+
+                    dto.setTotal(p.getTotal());
+                    dto.setFechaPedido(p.getFechaPedido());
+
+                    // ================= CLIENTE =================
                     if (p.getConsumidor() != null && p.getConsumidor().getUsuario() != null) {
                         dto.setClienteNombre(
                                 p.getConsumidor().getUsuario().getNombre() + " " +
@@ -142,6 +146,7 @@ public class VendedorServiceImpl implements VendedorService {
                 })
                 .collect(Collectors.toList());
     }
+
 
     // ============================================================
     // LISTAR TODOS LOS VENDEDORES (ADMIN)

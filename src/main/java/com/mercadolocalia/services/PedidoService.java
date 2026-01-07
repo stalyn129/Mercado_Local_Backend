@@ -43,4 +43,10 @@ public interface PedidoService {
     Map<String, Object> obtenerEstadisticasVendedor(Integer idVendedor);
 
     List<Map<String, Object>> obtenerVentasMensuales(Integer idVendedor);
+    
+    List<Pedido> checkoutMultiVendedor(Integer idConsumidor);
+    
+    Pedido cancelarPedido(Integer idPedido);
+
+
 }

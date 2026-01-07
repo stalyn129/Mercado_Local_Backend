@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import com.mercadolocalia.entities.EstadoPedido;
+
 
 @Entity
 @Table(name = "pedidos")
@@ -33,8 +35,10 @@ public class Pedido {
     @Column(name = "fecha_pedido")
     private LocalDateTime fechaPedido;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "estado_pedido")
-    private String estadoPedido;
+    private EstadoPedido estadoPedido;
+
 
     @Column(name = "subtotal")
     private Double subtotal;
@@ -86,11 +90,11 @@ public class Pedido {
         this.fechaPedido = fechaPedido;
     }
 
-    public String getEstadoPedido() {
+    public EstadoPedido getEstadoPedido() {
         return estadoPedido;
     }
 
-    public void setEstadoPedido(String estadoPedido) {
+    public void setEstadoPedido(EstadoPedido estadoPedido) {
         this.estadoPedido = estadoPedido;
     }
 
