@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 
 import com.mercadolocalia.entities.Pedido;
 import com.mercadolocalia.entities.Consumidor;
+import com.mercadolocalia.entities.EstadoPedido;
 import com.mercadolocalia.entities.Vendedor;
 
 public interface PedidoRepository extends JpaRepository<Pedido, Integer> {
@@ -81,5 +82,12 @@ public interface PedidoRepository extends JpaRepository<Pedido, Integer> {
 
     	List<Pedido> findByConsumidor_IdConsumidor(Integer idConsumidor);
 
+    	List<Pedido> findByConsumidorAndTotalGreaterThanAndEstadoPedidoNot(
+    		    Consumidor consumidor,
+    		    Double total,
+    		    EstadoPedido estado
+    		);
+
+    	
 
 }

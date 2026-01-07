@@ -15,10 +15,10 @@ import com.mercadolocalia.dto.CheckoutRequest;
 import com.mercadolocalia.dto.PedidoCarritoRequest;
 import com.mercadolocalia.dto.PedidoDTO;
 import com.mercadolocalia.dto.PedidoRequest;
-import com.mercadolocalia.entities.Pedido;
 import com.mercadolocalia.entities.Consumidor;
 import com.mercadolocalia.entities.DetallePedido;
 import com.mercadolocalia.entities.EstadoPedido;
+import com.mercadolocalia.entities.Pedido;
 import com.mercadolocalia.entities.Usuario;
 import com.mercadolocalia.entities.Vendedor;
 import com.mercadolocalia.repositories.ConsumidorRepository;
@@ -26,6 +26,7 @@ import com.mercadolocalia.repositories.PedidoRepository;
 import com.mercadolocalia.repositories.UsuarioRepository;
 import com.mercadolocalia.repositories.VendedorRepository;
 import com.mercadolocalia.services.PedidoService;
+
 
 @RestController
 @RequestMapping("/pedidos")
@@ -142,13 +143,21 @@ public class PedidoController {
 	// ============================================================
 	
 	@PostMapping(value = "/finalizar/{idPedido}", consumes = "multipart/form-data")
-	public Pedido finalizarPedidoCompleto(@PathVariable Integer idPedido, @RequestParam String metodoPago,
-			@RequestParam(required = false) MultipartFile comprobante,
-			@RequestParam(required = false) String numTarjeta, @RequestParam(required = false) String fechaTarjeta,
-			@RequestParam(required = false) String cvv, @RequestParam(required = false) String titular) {
-
-		return pedidoService.finalizarPedido(idPedido, metodoPago, comprobante, numTarjeta, fechaTarjeta, cvv, titular);
-	}
+    @PreAuthorize("hasRole('CONSUMIDOR')")
+    public Pedido finalizarPedido(
+            @PathVariable Integer idPedido,
+            @RequestParam String metodoPago,
+            @RequestParam(required = false) MultipartFile comprobante,
+            @RequestParam(required = false) String numTarjeta,
+            @RequestParam(required = false) String fechaTarjeta,
+            @RequestParam(required = false) String cvv,
+            @RequestParam(required = false) String titular
+    ) {
+        return pedidoService.finalizarPedido(
+                idPedido, metodoPago,
+                comprobante, numTarjeta, fechaTarjeta, cvv, titular
+        );
+    }
 
 	// ============================================================
 	// CREAR PEDIDO DESDE CARRITO
@@ -282,20 +291,86 @@ public class PedidoController {
 	}
 
 
-	@PutMapping("/{id}/cancelar")
-	public ResponseEntity<?> cancelarPedido(@PathVariable Integer id) {
+	// ============================================================
+    // ❌ CANCELAR PEDIDO
+    // ============================================================
+    @PutMapping("/{idPedido}/cancelar")
+    @PreAuthorize("hasRole('CONSUMIDOR')")
+    public ResponseEntity<?> cancelarPedido(
+            @PathVariable Integer idPedido,
+            Authentication authentication
+    ) {
+        Usuario usuario = usuarioRepository.findByCorreo(authentication.getName())
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.UNAUTHORIZED, "Usuario no válido"));
 
-	    Pedido pedido = pedidoRepository.findById(id)
-	        .orElseThrow(() -> new RuntimeException("Pedido no existe"));
+        Pedido pedido = pedidoRepository.findById(idPedido)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Pedido no existe"));
 
-	    if (pedido.getEstadoPedido() == EstadoPedido.PENDIENTE) {
-	        pedido.setEstadoPedido(EstadoPedido.CANCELADO);
-	        pedidoRepository.save(pedido);
-	    }
+        if (!pedido.getConsumidor().getUsuario().getIdUsuario()
+                .equals(usuario.getIdUsuario())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
 
-	    return ResponseEntity.ok().build();
-	}
+        return ResponseEntity.ok(pedidoService.cancelarPedido(idPedido));
+    }
 
-	
+
+
+    // ============================================================
+    // 📦 MIS PEDIDOS (HISTORIAL LIMPIO)
+    // ============================================================
+    @GetMapping("/mis-pedidos")
+    @PreAuthorize("hasRole('CONSUMIDOR')")
+    public List<Pedido> misPedidos(Authentication authentication) {
+
+        Usuario usuario = usuarioRepository.findByCorreo(authentication.getName())
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.UNAUTHORIZED, "Usuario no autenticado"));
+
+        Consumidor consumidor = consumidorRepository.findByUsuario(usuario);
+
+        if (consumidor == null) {
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND, "Consumidor no encontrado");
+        }
+
+        return pedidoService.listarPedidosHistorial(consumidor.getIdConsumidor());
+    }
+
+ // ============================================================
+    // 🧾 FACTURA (SOLO SI YA PAGÓ O ESTÁ EN VERIFICACIÓN)
+    // ============================================================
+    @GetMapping("/{idPedido}/factura")
+    @PreAuthorize("hasRole('CONSUMIDOR')")
+    public Pedido obtenerFactura(
+            @PathVariable Integer idPedido,
+            Authentication authentication
+    ) {
+        Usuario usuario = usuarioRepository.findByCorreo(authentication.getName())
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.UNAUTHORIZED, "Usuario no autenticado"));
+
+        Pedido pedido = pedidoRepository.findById(idPedido)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Pedido no encontrado"));
+
+        if (!pedido.getConsumidor().getUsuario().getIdUsuario()
+                .equals(usuario.getIdUsuario())) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN, "No autorizado");
+        }
+
+        if (pedido.getEstadoPedido() == EstadoPedido.PENDIENTE
+                || pedido.getEstadoPedido() == EstadoPedido.PROCESANDO) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "La factura aún no está disponible");
+        }
+
+        return pedido;
+    }
 
 }
+

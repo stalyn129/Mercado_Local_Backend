@@ -487,6 +487,8 @@ public class PedidoServiceImpl implements PedidoService {
 		return res;
 	}
 
+	//Multivendedor
+	
 	@Override
 	@Transactional
 	public List<Pedido> checkoutMultiVendedor(Integer idConsumidor) {
@@ -607,27 +609,52 @@ public class PedidoServiceImpl implements PedidoService {
 	public Pedido cancelarPedido(Integer idPedido) {
 
 	    Pedido pedido = pedidoRepository.findById(idPedido)
-	            .orElseThrow(() -> new RuntimeException("Pedido no encontrado"));
+	        .orElseThrow(() -> new RuntimeException("Pedido no encontrado"));
 
-	    validarPedidoEditable(pedido);
+	    if (pedido.getEstadoPedido() != EstadoPedido.PENDIENTE &&
+	        pedido.getEstadoPedido() != EstadoPedido.PROCESANDO) {
+	        throw new RuntimeException("Solo se pueden cancelar pedidos pendientes");
+	    }
 
+	    // 1️⃣ Cancelar pedido
 	    pedido.setEstadoPedido(EstadoPedido.CANCELADO);
+	    pedidoRepository.save(pedido);
 
-	    notificacionService.crearNotificacion(
-	            pedido.getConsumidor().getUsuario(),
-	            "❌ Tu pedido #" + pedido.getIdPedido() + " fue cancelado",
-	            "PEDIDO",
-	            pedido.getIdPedido()
-	    );
+	    // 2️⃣ Recuperar carrito del consumidor
+	    Carrito carrito = carritoRepository
+	        .findByConsumidorIdConsumidor(
+	            pedido.getConsumidor().getIdConsumidor()
+	        )
+	        .orElseThrow(() -> new RuntimeException("Carrito no encontrado"));
 
-	    notificacionService.crearNotificacion(
-	            pedido.getVendedor().getUsuario(),
-	            "❌ Pedido #" + pedido.getIdPedido() + " fue cancelado por el cliente",
-	            "PEDIDO",
-	            pedido.getIdPedido()
-	    );
+	    // 3️⃣ Volver productos al carrito
+	    for (DetallePedido detalle : pedido.getDetalles()) {
+	        CarritoItem item = new CarritoItem();
+	        item.setCarrito(carrito);
+	        item.setProducto(detalle.getProducto());
+	        item.setCantidad(detalle.getCantidad());
 
-	    return pedidoRepository.save(pedido);
+	        carritoItemRepository.save(item);
+	    }
+
+	    return pedido;
+	}
+	
+	@Override
+	public List<Pedido> listarPedidosHistorial(Integer idConsumidor) {
+
+	    Consumidor consumidor = consumidorRepository.findById(idConsumidor)
+	            .orElseThrow(() -> new RuntimeException("Consumidor no encontrado"));
+
+	    List<Pedido> pedidos = pedidoRepository
+	            .findByConsumidorAndTotalGreaterThanAndEstadoPedidoNot(
+	                    consumidor, 0.0, EstadoPedido.CANCELADO
+	            );
+
+	    pedidos.removeIf(p ->
+	            p.getDetalles() == null || p.getDetalles().isEmpty());
+
+	    return pedidos;
 	}
 
 

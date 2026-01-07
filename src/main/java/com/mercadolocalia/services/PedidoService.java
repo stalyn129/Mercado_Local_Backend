@@ -48,5 +48,6 @@ public interface PedidoService {
     
     Pedido cancelarPedido(Integer idPedido);
 
+    List<Pedido> listarPedidosHistorial(Integer idConsumidor);
 
 }
