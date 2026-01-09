@@ -1,15 +1,27 @@
 package com.mercadolocalia.dto;
 
 import java.util.List;
+import jakarta.validation.constraints.*;
 
 public class PedidoRequest {
 
-    private Integer idConsumidor;
-    private Integer idVendedor;
-    private String metodoPago;
+	    @NotNull(message = "El consumidor es obligatorio")
+	    private Integer idConsumidor;
 
-    private List<DetallePedidoAddRequest> detalles;
+	    // ⚠️ Opcional si luego usas multi-vendedor
+	    private Integer idVendedor;
 
+	    @NotBlank(message = "El método de pago es obligatorio")
+	    private String metodoPago;
+
+	    @NotEmpty(message = "El pedido debe tener al menos un producto")
+	    private List<
+	        @NotNull(message = "El detalle no puede ser nulo")
+	        DetallePedidoAddRequest
+	    > detalles;
+
+	    // getters y setters
+	
     public Integer getIdConsumidor() {
         return idConsumidor;
     }

@@ -15,12 +15,14 @@ import com.mercadolocalia.dto.CheckoutRequest;
 import com.mercadolocalia.dto.PedidoCarritoRequest;
 import com.mercadolocalia.dto.PedidoDTO;
 import com.mercadolocalia.dto.PedidoRequest;
+import com.mercadolocalia.dto.PedidoResponse;
 import com.mercadolocalia.entities.Consumidor;
 import com.mercadolocalia.entities.DetallePedido;
 import com.mercadolocalia.entities.EstadoPedido;
 import com.mercadolocalia.entities.Pedido;
 import com.mercadolocalia.entities.Usuario;
 import com.mercadolocalia.entities.Vendedor;
+import com.mercadolocalia.mappers.PedidoMapper;
 import com.mercadolocalia.repositories.ConsumidorRepository;
 import com.mercadolocalia.repositories.PedidoRepository;
 import com.mercadolocalia.repositories.UsuarioRepository;
@@ -323,7 +325,7 @@ public class PedidoController {
     // ============================================================
     @GetMapping("/mis-pedidos")
     @PreAuthorize("hasRole('CONSUMIDOR')")
-    public List<Pedido> misPedidos(Authentication authentication) {
+    public List<PedidoResponse> misPedidos(Authentication authentication) {
 
         Usuario usuario = usuarioRepository.findByCorreo(authentication.getName())
                 .orElseThrow(() -> new ResponseStatusException(
@@ -336,8 +338,13 @@ public class PedidoController {
                     HttpStatus.NOT_FOUND, "Consumidor no encontrado");
         }
 
-        return pedidoService.listarPedidosHistorial(consumidor.getIdConsumidor());
+        return pedidoService
+                .listarPedidosHistorial(consumidor.getIdConsumidor())
+                .stream()
+                .map(PedidoMapper::toResponse) // 🔑 AQUÍ
+                .toList();
     }
+
 
  // ============================================================
     // 🧾 FACTURA (SOLO SI YA PAGÓ O ESTÁ EN VERIFICACIÓN)
@@ -370,6 +377,18 @@ public class PedidoController {
         }
 
         return pedido;
+    }
+
+    
+    
+    @PatchMapping("/{id}/estado-seguimiento")
+    public ResponseEntity<Pedido> cambiarEstadoSeguimiento(
+            @PathVariable Integer id,
+            @RequestParam String estado
+    ) {
+        return ResponseEntity.ok(
+            pedidoService.cambiarEstadoSeguimiento(id, estado)
+        );
     }
 
 }

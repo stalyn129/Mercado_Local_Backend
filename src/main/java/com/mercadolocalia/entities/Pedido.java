@@ -38,6 +38,10 @@ public class Pedido {
     @Enumerated(EnumType.STRING)
     @Column(name = "estado_pedido")
     private EstadoPedido estadoPedido;
+    
+    @Enumerated(EnumType.STRING)
+    private EstadoSeguimientoPedido estadoSeguimiento;
+
 
 
     @Column(name = "subtotal")
@@ -98,7 +102,15 @@ public class Pedido {
         this.estadoPedido = estadoPedido;
     }
 
-    public Double getSubtotal() {
+    public EstadoSeguimientoPedido getEstadoSeguimiento() {
+		return estadoSeguimiento;
+	}
+
+	public void setEstadoSeguimiento(EstadoSeguimientoPedido estadoSeguimiento) {
+		this.estadoSeguimiento = estadoSeguimiento;
+	}
+
+	public Double getSubtotal() {
         return subtotal;
     }
 

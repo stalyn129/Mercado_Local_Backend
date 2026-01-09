@@ -23,6 +23,8 @@ public interface PedidoService {
     List<DetallePedido> listarDetalles(Integer idPedido);
 
     Pedido cambiarEstado(Integer idPedido, String nuevoEstado);
+    
+    Pedido cambiarEstadoSeguimiento(Integer idPedido, String nuevoEstadoSeguimiento);
 
     Pedido comprarAhora(PedidoRequest request);
 
@@ -50,4 +52,6 @@ public interface PedidoService {
 
     List<Pedido> listarPedidosHistorial(Integer idConsumidor);
 
+    
+    
 }
