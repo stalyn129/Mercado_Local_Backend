@@ -19,6 +19,7 @@ import com.mercadolocalia.entities.CarritoItem;
 import com.mercadolocalia.entities.Consumidor;
 import com.mercadolocalia.entities.DetallePedido;
 import com.mercadolocalia.entities.EstadoPedido;
+import com.mercadolocalia.entities.EstadoSeguimientoPedido;
 import com.mercadolocalia.entities.Pedido;
 import com.mercadolocalia.entities.Producto;
 import com.mercadolocalia.entities.Vendedor;
@@ -657,5 +658,17 @@ public class PedidoServiceImpl implements PedidoService {
 	    return pedidos;
 	}
 
+	
+	@Override
+	public Pedido cambiarEstadoSeguimiento(Integer idPedido, String nuevoEstadoSeguimiento) {
 
+	    Pedido pedido = pedidoRepository.findById(idPedido)
+	        .orElseThrow(() -> new RuntimeException("Pedido no encontrado"));
+
+	    EstadoSeguimientoPedido estado = EstadoSeguimientoPedido.valueOf(nuevoEstadoSeguimiento);
+
+	    pedido.setEstadoSeguimiento(estado);
+
+	    return pedidoRepository.save(pedido);
+	}
 }
