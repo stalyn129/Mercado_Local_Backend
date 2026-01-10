@@ -62,6 +62,9 @@ public class Pedido {
     
     @Column(name = "datos_tarjeta", nullable = true)
     private String datosTarjeta;
+    
+    @Column(name = "pagado")
+    private Boolean pagado = false;
 
     // Getters y Setters
     
@@ -167,5 +170,12 @@ public class Pedido {
     
     public void setDatosTarjeta(String datosTarjeta) {
         this.datosTarjeta = datosTarjeta;
+    }
+    public Boolean getPagado() {
+        return pagado;
+    }
+
+    public void setPagado(Boolean pagado) {
+        this.pagado = pagado;
     }
 }

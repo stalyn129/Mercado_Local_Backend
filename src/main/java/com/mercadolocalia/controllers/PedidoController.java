@@ -20,6 +20,7 @@ import com.mercadolocalia.dto.PedidoResponse;
 import com.mercadolocalia.entities.Consumidor;
 import com.mercadolocalia.entities.DetallePedido;
 import com.mercadolocalia.entities.EstadoPedido;
+import com.mercadolocalia.entities.EstadoSeguimientoPedido;
 import com.mercadolocalia.entities.Pedido;
 import com.mercadolocalia.entities.PedidoVendedor;
 import com.mercadolocalia.entities.Usuario;
@@ -355,4 +356,39 @@ public class PedidoController {
 		return ResponseEntity.ok(detalles);
 	}
 
+	
+	@PutMapping("/{idPedido}/marcar-entregado")
+	@PreAuthorize("hasAnyRole('VENDEDOR', 'REPARTIDOR')")
+	public ResponseEntity<?> marcarComoEntregado(
+	        @PathVariable Integer idPedido,
+	        @RequestBody Map<String, Boolean> request,
+	        Authentication authentication) {
+	    
+	    try {
+	        Pedido pedido = pedidoRepository.findById(idPedido)
+	                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Pedido no encontrado"));
+
+	        // Marcar como COMPLETADO
+	        pedido.setEstadoPedido(EstadoPedido.COMPLETADO);
+	        
+	        // Marcar como ENTREGADO (seguimiento)
+	        pedido.setEstadoSeguimiento(EstadoSeguimientoPedido.ENTREGADO);
+	        
+	        // Si el método de pago es EFECTIVO, marcar como pagado
+	        Boolean pagadoEnEfectivo = request.getOrDefault("pagado", false);
+	        if ("EFECTIVO".equalsIgnoreCase(pedido.getMetodoPago()) && pagadoEnEfectivo) {
+	            pedido.setPagado(true);
+	        }
+	        
+	        pedidoRepository.save(pedido);
+
+	        return ResponseEntity.ok(Map.of(
+	            "mensaje", "Pedido marcado como entregado",
+	            "pedido", pedido
+	        ));
+	        
+	    } catch (Exception e) {
+	        return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+	    }
+	}
 }

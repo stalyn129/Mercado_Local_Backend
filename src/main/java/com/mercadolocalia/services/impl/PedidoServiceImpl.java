@@ -334,33 +334,39 @@ public class PedidoServiceImpl implements PedidoService {
 	    // ===============================
 	    // TRANSFERENCIA
 	    // ===============================
-	    else if (metodoPago.equalsIgnoreCase("TRANSFERENCIA")) {
+	 else if (metodoPago.equalsIgnoreCase("TRANSFERENCIA")) {
 
-	        if (comprobante == null || comprobante.isEmpty()) {
-	            throw new RuntimeException("Debe subir el comprobante de transferencia");
-	        }
+	     if (comprobante == null || comprobante.isEmpty()) {
+	         throw new RuntimeException("Debe subir el comprobante de transferencia");
+	     }
 
-	        try {
-	            String carpeta = "uploads/comprobantes/";
-	            new File(carpeta).mkdirs();
+	     try {
+	         // ✅ RUTA ABSOLUTA
+	         String directorioBase = System.getProperty("user.dir");
+	         String carpeta = directorioBase + "/uploads/comprobantes/";
+	         
+	         File directorio = new File(carpeta);
+	         if (!directorio.exists()) {
+	             boolean creado = directorio.mkdirs();
+	             System.out.println("📁 Directorio creado: " + creado + " en: " + carpeta);
+	         }
 
-	            String nombre = System.currentTimeMillis() + "_" + comprobante.getOriginalFilename();
-	            comprobante.transferTo(new File(carpeta + nombre));
+	         String nombre = System.currentTimeMillis() + "_" + comprobante.getOriginalFilename();
+	         File archivo = new File(carpeta + nombre);
+	         
+	         System.out.println("💾 Guardando archivo en: " + archivo.getAbsolutePath());
+	         comprobante.transferTo(archivo);
 
-	            pedido.setComprobanteUrl("/" + carpeta + nombre);
-	            pedido.setEstadoPedido(EstadoPedido.PENDIENTE_VERIFICACION);
+	         pedido.setComprobanteUrl("/uploads/comprobantes/" + nombre);
+	         pedido.setEstadoPedido(EstadoPedido.PENDIENTE_VERIFICACION);
 
-	        } catch (Exception e) {
-	            throw new RuntimeException("Error al guardar comprobante");
-	        }
-
-	        notificacionService.crearNotificacion(
-	                pedido.getVendedor().getUsuario(),
-	                "💳 Pedido #" + pedido.getIdPedido() + " pendiente de verificación de transferencia",
-	                "PEDIDO",
-	                pedido.getIdPedido()
-	        );
-	    }
+	     } catch (Exception e) {
+	         // ✅ MOSTRAR ERROR REAL
+	         e.printStackTrace();
+	         System.err.println("❌ Error al guardar comprobante: " + e.getMessage());
+	         throw new RuntimeException("Error al guardar comprobante: " + e.getMessage());
+	     }
+	 }
 
 	    // ===============================
 	    // TARJETA
