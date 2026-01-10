@@ -19,8 +19,10 @@ import com.mercadolocalia.entities.CarritoItem;
 import com.mercadolocalia.entities.Consumidor;
 import com.mercadolocalia.entities.DetallePedido;
 import com.mercadolocalia.entities.EstadoPedido;
+import com.mercadolocalia.entities.EstadoPedidoVendedor;
 import com.mercadolocalia.entities.EstadoSeguimientoPedido;
 import com.mercadolocalia.entities.Pedido;
+import com.mercadolocalia.entities.PedidoVendedor;
 import com.mercadolocalia.entities.Producto;
 import com.mercadolocalia.entities.Vendedor;
 import com.mercadolocalia.repositories.CarritoItemRepository;
@@ -28,6 +30,7 @@ import com.mercadolocalia.repositories.CarritoRepository;
 import com.mercadolocalia.repositories.ConsumidorRepository;
 import com.mercadolocalia.repositories.DetallePedidoRepository;
 import com.mercadolocalia.repositories.PedidoRepository;
+import com.mercadolocalia.repositories.PedidoVendedorRepository;
 import com.mercadolocalia.repositories.ProductoRepository;
 import com.mercadolocalia.repositories.VendedorRepository;
 import com.mercadolocalia.services.NotificacionService;
@@ -54,6 +57,8 @@ public class PedidoServiceImpl implements PedidoService {
 	private CarritoRepository carritoRepository;
 	@Autowired
 	private CarritoItemRepository carritoItemRepository;
+	@Autowired
+	private PedidoVendedorRepository pedidoVendedorRepo;
 
 	// ============================================================
 	// CREAR PEDIDO COMPLETO
@@ -493,7 +498,6 @@ public class PedidoServiceImpl implements PedidoService {
 	@Override
 	@Transactional
 	public List<Pedido> checkoutMultiVendedor(Integer idConsumidor) {
-
 	    Carrito carrito = carritoRepository.findByConsumidorIdConsumidor(idConsumidor)
 	            .orElseThrow(() -> new RuntimeException("Carrito no encontrado"));
 
@@ -501,9 +505,7 @@ public class PedidoServiceImpl implements PedidoService {
 	        throw new RuntimeException("El carrito está vacío");
 	    }
 
-	    // 1️⃣ Agrupar items por vendedor
 	    Map<Vendedor, List<CarritoItem>> itemsPorVendedor = new HashMap<>();
-
 	    for (CarritoItem item : carrito.getItems()) {
 	        Vendedor vendedor = item.getProducto().getVendedor();
 	        itemsPorVendedor.computeIfAbsent(vendedor, v -> new ArrayList<>()).add(item);
@@ -511,9 +513,7 @@ public class PedidoServiceImpl implements PedidoService {
 
 	    List<Pedido> pedidosCreados = new ArrayList<>();
 
-	    // 2️⃣ Crear un pedido por vendedor
 	    for (Map.Entry<Vendedor, List<CarritoItem>> entry : itemsPorVendedor.entrySet()) {
-
 	        Vendedor vendedor = entry.getKey();
 	        List<CarritoItem> items = entry.getValue();
 
@@ -525,47 +525,42 @@ public class PedidoServiceImpl implements PedidoService {
 	        pedido.setFechaPedido(LocalDateTime.now());
 
 	        double subtotal = 0.0;
-
-	        // 3️⃣ Calcular subtotal primero
 	        for (CarritoItem item : items) {
-	            double precio = item.getProducto().getPrecioProducto();
-	            int cantidad = item.getCantidad();
-	            double subItem = precio * cantidad;
-	            subtotal += subItem;
+	            subtotal += (item.getProducto().getPrecioProducto() * item.getCantidad());
 	        }
 
-	        double iva = subtotal * 0.12;
-	        double total = subtotal + iva;
-
 	        pedido.setSubtotal(subtotal);
-	        pedido.setIva(iva);
-	        pedido.setTotal(total);
+	        pedido.setIva(subtotal * 0.12);
+	        pedido.setTotal(subtotal + pedido.getIva());
 
-	        // 🔥 GUARDAR EL PEDIDO PRIMERO
+	        // Guardamos el pedido como siempre
 	        Pedido pedidoGuardado = pedidoRepository.save(pedido);
 
-	        // 4️⃣ AHORA crear los detalles con el pedido guardado
+	        // ============================================================
+	        // 🔥 NUEVO: REGISTRAR EN LA TABLA DEL VENDEDOR
+	        // ============================================================
+	        PedidoVendedor pv = new PedidoVendedor();
+	        pv.setPedido(pedidoGuardado);
+	        pv.setVendedor(vendedor);
+	        pv.setEstado(EstadoPedidoVendedor.NUEVO); 
+	        pv.setFechaActualizacion(LocalDateTime.now());
+	        pedidoVendedorRepo.save(pv); 
+	        // ============================================================
+
 	        for (CarritoItem item : items) {
-	            double precio = item.getProducto().getPrecioProducto();
-	            int cantidad = item.getCantidad();
-	            double subItem = precio * cantidad;
-
 	            DetallePedido detalle = new DetallePedido();
-	            detalle.setPedido(pedidoGuardado); // ✅ Ya tiene ID
+	            detalle.setPedido(pedidoGuardado);
 	            detalle.setProducto(item.getProducto());
-	            detalle.setCantidad(cantidad);
-	            detalle.setPrecioUnitario(precio);
-	            detalle.setSubtotal(subItem);
-
+	            detalle.setCantidad(item.getCantidad());
+	            detalle.setPrecioUnitario(item.getProducto().getPrecioProducto());
+	            detalle.setSubtotal(item.getProducto().getPrecioProducto() * item.getCantidad());
 	            detallePedidoRepository.save(detalle);
 	        }
 
 	        pedidosCreados.add(pedidoGuardado);
 	    }
 
-	    // 5️⃣ Vaciar carrito REAL
 	    carritoItemRepository.deleteAll(carrito.getItems());
-
 	    return pedidosCreados;
 	}
 
@@ -612,6 +607,15 @@ public class PedidoServiceImpl implements PedidoService {
 	    Pedido pedido = pedidoRepository.findById(idPedido)
 	        .orElseThrow(() -> new RuntimeException("Pedido no encontrado"));
 
+	    // 🚨 NUEVA VALIDACIÓN: No permitir cancelar si es efectivo y ya fue confirmado
+	    if ("EFECTIVO".equalsIgnoreCase(pedido.getMetodoPago()) && 
+	        pedido.getEstadoPedido() != EstadoPedido.PENDIENTE) {
+	        throw new RuntimeException(
+	            "Los pedidos en efectivo no pueden cancelarse una vez confirmados. " +
+	            "Contacta al vendedor si tienes algún problema."
+	        );
+	    }
+
 	    if (pedido.getEstadoPedido() != EstadoPedido.PENDIENTE &&
 	        pedido.getEstadoPedido() != EstadoPedido.PROCESANDO) {
 	        throw new RuntimeException("Solo se pueden cancelar pedidos pendientes");
@@ -640,6 +644,8 @@ public class PedidoServiceImpl implements PedidoService {
 
 	    return pedido;
 	}
+	
+	//
 	
 	@Override
 	public List<Pedido> listarPedidosHistorial(Integer idConsumidor) {
@@ -671,4 +677,182 @@ public class PedidoServiceImpl implements PedidoService {
 
 	    return pedidoRepository.save(pedido);
 	}
+	
+	// ============================================================
+    // ACTUALIZAR ESTADO OPERATIVO (PARA EL DASHBOARD DEL VENDEDOR)
+    // ============================================================
+	@Override
+	public List<PedidoVendedor> listarPedidosParaDashboardVendedor(Integer idVendedor) {
+	    return pedidoVendedorRepo.findByVendedor_IdVendedor(idVendedor);
+	}
+
+	@Override
+	@Transactional
+	public void actualizarEstadoOperativo(Integer idPedidoVendedor, String nuevoEstado) {
+	    // 1. Buscar el registro del vendedor
+	    PedidoVendedor pv = pedidoVendedorRepo.findById(idPedidoVendedor)
+	        .orElseThrow(() -> new RuntimeException("No se encontró el registro para el vendedor"));
+
+	    // 2. Actualizar estado del vendedor
+	    try {
+	        EstadoPedidoVendedor estadoEnum = EstadoPedidoVendedor.valueOf(nuevoEstado.toUpperCase());
+	        pv.setEstado(estadoEnum);
+	    } catch (IllegalArgumentException e) {
+	        throw new RuntimeException("Estado '" + nuevoEstado + "' no es válido.");
+	    }
+	    
+	    pv.setFechaActualizacion(LocalDateTime.now());
+	    pedidoVendedorRepo.save(pv);
+
+	    // 3. LOGICA DE SINCRONIZACIÓN AUTOMÁTICA
+	    // Si este vendedor completa su parte, verificamos si el pedido global debe completarse
+	    if (pv.getEstado() == EstadoPedidoVendedor.ENTREGADO) {
+	        verificarYFinalizarPedidoGlobal(pv.getPedido());
+	    }
+
+	    // 4. Notificar al Consumidor
+	    notificacionService.crearNotificacion(
+	        pv.getPedido().getConsumidor().getUsuario(),
+	        "📦 Tu paquete de " + pv.getVendedor().getNombreEmpresa() + " cambió a: " + nuevoEstado,
+	        "PEDIDO",
+	        pv.getPedido().getIdPedido()
+	    );
+	}
+
+	// Método privado para cerrar el pedido general automáticamente
+	private void verificarYFinalizarPedidoGlobal(Pedido pedido) {
+	    // 1. Buscamos todos los registros de "pedido_vendedor" que pertenecen a este mismo pedido
+	    List<PedidoVendedor> participaciones = pedidoVendedorRepo.findAll().stream()
+	            .filter(pv -> pv.getPedido().getIdPedido().equals(pedido.getIdPedido()))
+	            .toList();
+
+	    // 2. Verificamos si todos ya están en estado ENTREGADO
+	    boolean todosEntregaron = participaciones.stream()
+	            .allMatch(pv -> pv.getEstado() == EstadoPedidoVendedor.ENTREGADO);
+
+	    // 3. Si todos terminaron, el pedido general pasa a COMPLETADO
+	    if (todosEntregaron) {
+	        pedido.setEstadoPedido(EstadoPedido.COMPLETADO);
+	        pedidoRepository.save(pedido);
+	    }
+	}
+	
+	//
+	
+	@Override
+	public List<DetallePedido> listarDetallesPorVendedor(Integer idPedido, Integer idVendedor) {
+	    // Buscamos todos los detalles del pedido original
+	    List<DetallePedido> todosLosDetalles = detallePedidoRepository.findByPedido(
+	        pedidoRepository.findById(idPedido).orElseThrow(() -> new RuntimeException("Pedido no encontrado"))
+	    );
+
+	    // Filtramos para devolver solo los que pertenecen al vendedor que consulta
+	    return todosLosDetalles.stream()
+	            .filter(d -> d.getProducto().getVendedor().getIdVendedor().equals(idVendedor))
+	            .toList();
+	}
+	
+	@Override
+	@Transactional
+	public Pedido checkoutUnificado(Integer idConsumidor) {
+	    
+	    System.out.println("🔍 INICIANDO CHECKOUT UNIFICADO para consumidor: " + idConsumidor);
+
+	    // 1️⃣ Obtener el carrito
+	    Carrito carrito = carritoRepository.findByConsumidorIdConsumidor(idConsumidor)
+	            .orElseThrow(() -> new RuntimeException("Carrito no encontrado"));
+
+	    System.out.println("✅ Carrito encontrado. Items: " + carrito.getItems().size());
+
+	    if (carrito.getItems().isEmpty()) {
+	        throw new RuntimeException("El carrito está vacío");
+	    }
+
+	    // 🔥 OBTENER EL PRIMER VENDEDOR DEL CARRITO
+	    CarritoItem primerItem = carrito.getItems().get(0);
+	    System.out.println("🔍 Primer item: " + primerItem.getProducto().getNombreProducto());
+	    
+	    Vendedor primerVendedor = primerItem.getProducto().getVendedor();
+	    
+	    if (primerVendedor == null) {
+	        System.out.println("❌ ERROR: El producto no tiene vendedor asignado");
+	        throw new RuntimeException("Los productos no tienen vendedor asignado");
+	    }
+	    
+	    System.out.println("✅ Vendedor encontrado: " + primerVendedor.getIdVendedor());
+
+	    // 2️⃣ CREAR UN SOLO PEDIDO
+	    Pedido pedido = new Pedido();
+	    pedido.setConsumidor(carrito.getConsumidor());
+	    pedido.setVendedor(primerVendedor);  // ✅ ASIGNAR VENDEDOR
+	    pedido.setMetodoPago("PENDIENTE");
+	    pedido.setEstadoPedido(EstadoPedido.PENDIENTE);
+	    pedido.setFechaPedido(LocalDateTime.now());
+
+	    System.out.println("✅ Pedido creado (sin guardar aún)");
+
+	    // 3️⃣ Calcular el total de TODOS los items
+	    double subtotal = 0.0;
+	    for (CarritoItem item : carrito.getItems()) {
+	        subtotal += (item.getProducto().getPrecioProducto() * item.getCantidad());
+	    }
+
+	    pedido.setSubtotal(subtotal);
+	    pedido.setIva(subtotal * 0.12);
+	    pedido.setTotal(subtotal + pedido.getIva());
+
+	    System.out.println("✅ Totales calculados - Subtotal: " + subtotal + ", Total: " + pedido.getTotal());
+
+	    // 4️⃣ Guardar el pedido único
+	    System.out.println("🔍 Intentando guardar pedido...");
+	    
+	    try {
+	        Pedido pedidoGuardado = pedidoRepository.save(pedido);
+	        System.out.println("✅ Pedido guardado con ID: " + pedidoGuardado.getIdPedido());
+	        
+	        // 5️⃣ Crear detalles y registros en pedido_vendedor
+	        Map<Vendedor, List<CarritoItem>> itemsPorVendedor = new HashMap<>();
+	        for (CarritoItem item : carrito.getItems()) {
+	            Vendedor vendedor = item.getProducto().getVendedor();
+	            itemsPorVendedor.computeIfAbsent(vendedor, v -> new ArrayList<>()).add(item);
+	        }
+
+	        // 6️⃣ Crear detalles del pedido
+	        for (CarritoItem item : carrito.getItems()) {
+	            DetallePedido detalle = new DetallePedido();
+	            detalle.setPedido(pedidoGuardado);
+	            detalle.setProducto(item.getProducto());
+	            detalle.setCantidad(item.getCantidad());
+	            detalle.setPrecioUnitario(item.getProducto().getPrecioProducto());
+	            detalle.setSubtotal(item.getProducto().getPrecioProducto() * item.getCantidad());
+	            detallePedidoRepository.save(detalle);
+	        }
+	        
+	        System.out.println("✅ Detalles del pedido creados");
+
+	        // 7️⃣ CREAR REGISTROS EN PEDIDO_VENDEDOR PARA CADA VENDEDOR
+	        for (Vendedor vendedor : itemsPorVendedor.keySet()) {
+	            PedidoVendedor pv = new PedidoVendedor();
+	            pv.setPedido(pedidoGuardado);
+	            pv.setVendedor(vendedor);
+	            pv.setEstado(EstadoPedidoVendedor.NUEVO);
+	            pv.setFechaActualizacion(LocalDateTime.now());
+	            pedidoVendedorRepo.save(pv);
+	        }
+	        
+	        System.out.println("✅ Registros de pedido_vendedor creados");
+
+	        // 8️⃣ Limpiar el carrito
+	        carritoItemRepository.deleteAll(carrito.getItems());
+	        System.out.println("✅ Carrito limpiado");
+
+	        return pedidoGuardado;
+	        
+	    } catch (Exception e) {
+	        System.out.println("❌ ERROR AL GUARDAR PEDIDO: " + e.getMessage());
+	        e.printStackTrace();
+	        throw e;
+	    }
+	}
+
 }

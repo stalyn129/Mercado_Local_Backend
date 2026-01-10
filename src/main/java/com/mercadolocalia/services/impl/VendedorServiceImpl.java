@@ -1,4 +1,4 @@
-package com.mercadolocalia.services.impl;
+	package com.mercadolocalia.services.impl;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -10,9 +10,11 @@ import com.mercadolocalia.dto.EstadisticasDTO;
 import com.mercadolocalia.dto.PedidoDTO;
 import com.mercadolocalia.dto.VendedorRequest;
 import com.mercadolocalia.entities.Pedido;
+import com.mercadolocalia.entities.PedidoVendedor;
 import com.mercadolocalia.entities.Usuario;
 import com.mercadolocalia.entities.Vendedor;
 import com.mercadolocalia.repositories.PedidoRepository;
+import com.mercadolocalia.repositories.PedidoVendedorRepository;
 import com.mercadolocalia.repositories.ProductoRepository;
 import com.mercadolocalia.repositories.UsuarioRepository;
 import com.mercadolocalia.repositories.VendedorRepository;
@@ -33,6 +35,9 @@ public class VendedorServiceImpl implements VendedorService {
     @Autowired
     private ProductoRepository productoRepository;
 
+    @Autowired
+    private PedidoVendedorRepository pedidoVendedorRepo;
+    
     // ============================================================
     // REGISTRAR VENDEDOR
     // ============================================================
@@ -155,4 +160,11 @@ public class VendedorServiceImpl implements VendedorService {
     public List<Vendedor> listarTodos() {
         return vendedorRepository.findAll();
     }
+  
+        @Override
+        public List<PedidoVendedor> listarMisPedidos(Integer idVendedor) {
+     
+            return pedidoVendedorRepo.findByVendedor_IdVendedor(idVendedor);
+        }
+    
 }

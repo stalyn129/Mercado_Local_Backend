@@ -8,6 +8,7 @@ import org.springframework.web.multipart.MultipartFile;
 import com.mercadolocalia.dto.PedidoCarritoRequest;
 import com.mercadolocalia.dto.PedidoRequest;
 import com.mercadolocalia.entities.Pedido;
+import com.mercadolocalia.entities.PedidoVendedor;
 import com.mercadolocalia.entities.DetallePedido;
 
 public interface PedidoService {
@@ -52,6 +53,10 @@ public interface PedidoService {
 
     List<Pedido> listarPedidosHistorial(Integer idConsumidor);
 
+    void actualizarEstadoOperativo(Integer idPedidoVendedor, String nuevoEstado);
+    List<PedidoVendedor> listarPedidosParaDashboardVendedor(Integer idVendedor);
     
-    
+    List<DetallePedido> listarDetallesPorVendedor(Integer idPedido, Integer idVendedor);
+ 
+    Pedido checkoutUnificado(Integer idConsumidor);
 }

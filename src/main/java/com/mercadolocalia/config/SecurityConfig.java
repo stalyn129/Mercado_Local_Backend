@@ -92,6 +92,7 @@
 	                // ============================
 	                // 🛒 VENDEDOR
 	                // ============================
+	                .requestMatchers("/api/pedidos-vendedor/**").hasAnyRole("VENDEDOR", "ADMIN")
 	                .requestMatchers("/vendedor/**").hasAnyRole("VENDEDOR", "ADMIN")
 	                .requestMatchers(HttpMethod.POST, "/productos/crear").hasRole("VENDEDOR")
 	                .requestMatchers(HttpMethod.PUT, "/productos/editar/**").hasRole("VENDEDOR")
@@ -100,7 +101,8 @@
 	                .requestMatchers(HttpMethod.GET, "/productos/vendedor/**").hasRole("VENDEDOR")
 	                .requestMatchers("/pedidos/vendedor/**").hasRole("VENDEDOR")
 	                .requestMatchers(HttpMethod.GET, "/valoraciones/vendedor/**").hasRole("VENDEDOR")
-	                .requestMatchers("/pedidos/estadisticas/**").hasRole("VENDEDOR") 
+	                .requestMatchers("/pedidos/estadisticas/**").hasRole("VENDEDOR")
+	                
 	                
 	
 	

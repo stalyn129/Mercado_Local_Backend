@@ -1,6 +1,7 @@
 package com.mercadolocalia.controllers;
 
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -20,6 +21,7 @@ import com.mercadolocalia.entities.Consumidor;
 import com.mercadolocalia.entities.DetallePedido;
 import com.mercadolocalia.entities.EstadoPedido;
 import com.mercadolocalia.entities.Pedido;
+import com.mercadolocalia.entities.PedidoVendedor;
 import com.mercadolocalia.entities.Usuario;
 import com.mercadolocalia.entities.Vendedor;
 import com.mercadolocalia.mappers.PedidoMapper;
@@ -28,7 +30,6 @@ import com.mercadolocalia.repositories.PedidoRepository;
 import com.mercadolocalia.repositories.UsuarioRepository;
 import com.mercadolocalia.repositories.VendedorRepository;
 import com.mercadolocalia.services.PedidoService;
-
 
 @RestController
 @RequestMapping("/pedidos")
@@ -45,11 +46,10 @@ public class PedidoController {
 
 	@Autowired
 	private VendedorRepository vendedorRepository;
-	
+
 	@Autowired
 	private ConsumidorRepository consumidorRepository;
 
-	
 	// ============================================================
 	// CREAR PEDIDO COMPLETO
 	// ============================================================
@@ -61,22 +61,18 @@ public class PedidoController {
 	// ============================================================
 	// 🔒 DETALLE DE PEDIDO (VENDEDOR)
 	// ============================================================
-	
 	@GetMapping("/vendedor/detalle/{idPedido}")
 	@PreAuthorize("hasRole('VENDEDOR')")
 	public ResponseEntity<?> obtenerPedidoVendedor(@PathVariable Integer idPedido, Authentication authentication) {
-		// Usuario autenticado
 		Usuario usuario = usuarioRepository.findByCorreo(authentication.getName())
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Usuario no autenticado"));
 
-		// 🔑 Obtener vendedor asociado a ese usuario
 		Vendedor vendedor = vendedorRepository.findByUsuario(usuario).orElseThrow(
 				() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "El usuario no está asociado a un vendedor"));
 
 		Pedido pedido = pedidoRepository.findById(idPedido)
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Pedido no encontrado"));
 
-		// 🔒 VALIDACIÓN CLAVE
 		if (!pedido.getVendedor().getIdVendedor().equals(vendedor.getIdVendedor())) {
 			throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No autorizado para ver este pedido");
 		}
@@ -87,7 +83,6 @@ public class PedidoController {
 	// ============================================================
 	// LISTAR PEDIDOS POR CONSUMIDOR
 	// ============================================================
-	
 	@GetMapping("/consumidor/{idConsumidor}")
 	public List<Pedido> listarPorConsumidor(@PathVariable Integer idConsumidor) {
 		return pedidoService.listarPedidosPorConsumidor(idConsumidor);
@@ -96,7 +91,6 @@ public class PedidoController {
 	// ============================================================
 	// LISTAR PEDIDOS POR VENDEDOR
 	// ============================================================
-	
 	@GetMapping("/vendedor/{idVendedor}")
 	public List<Pedido> listarPorVendedor(@PathVariable Integer idVendedor) {
 		return pedidoService.listarPedidosPorVendedor(idVendedor);
@@ -105,7 +99,6 @@ public class PedidoController {
 	// ============================================================
 	// LISTAR DETALLES DE UN PEDIDO
 	// ============================================================
-	
 	@GetMapping("/{idPedido}/detalles")
 	public List<DetallePedido> listarDetalles(@PathVariable Integer idPedido) {
 		return pedidoService.listarDetalles(idPedido);
@@ -114,7 +107,6 @@ public class PedidoController {
 	// ============================================================
 	// CAMBIAR ESTADO DEL PEDIDO (VENDEDOR)
 	// ============================================================
-	
 	@PutMapping("/estado/{idPedido}")
 	@PreAuthorize("hasRole('VENDEDOR')")
 	public Pedido cambiarEstado(@PathVariable Integer idPedido, @RequestParam String estado) {
@@ -124,47 +116,52 @@ public class PedidoController {
 	// ============================================================
 	// COMPRAR AHORA
 	// ============================================================
-	
 	@PostMapping("/comprar-ahora")
 	public Pedido comprarAhora(@RequestBody PedidoRequest request) {
 		return pedidoService.comprarAhora(request);
 	}
 
 	// ============================================================
-	// FINALIZAR COMPRA SIMPLE
+	// FINALIZAR COMPRA CON EFECTIVO (JSON)
 	// ============================================================
-	
-	@PutMapping("/finalizar/{idPedido}")
-	public Pedido finalizarPedidoSimple(@PathVariable Integer idPedido, @RequestParam String metodoPago) {
-
-		return pedidoService.finalizarPedido(idPedido, metodoPago);
+	@PutMapping(value = "/finalizar/{idPedido}", consumes = "application/json")
+	@PreAuthorize("hasRole('CONSUMIDOR')")
+	public Pedido finalizarPedidoEfectivo(
+	    @PathVariable Integer idPedido, 
+	    @RequestBody Map<String, Object> body
+	) {
+	    String metodoPago = (String) body.get("metodoPago");
+	    return pedidoService.finalizarPedido(idPedido, metodoPago);
 	}
 
 	// ============================================================
-	// FINALIZAR COMPRA COMPLETA
+	// FINALIZAR COMPRA CON TRANSFERENCIA/TARJETA (MULTIPART)
 	// ============================================================
+	@PutMapping(value = "/finalizar/{idPedido}", consumes = "multipart/form-data")
+	@PreAuthorize("hasRole('CONSUMIDOR')")
+	public Pedido finalizarPedidoConArchivo(
+	    @PathVariable Integer idPedido, 
+	    @RequestParam String metodoPago,
+	    @RequestParam(required = false) MultipartFile comprobante,
+	    @RequestParam(required = false) String numTarjeta, 
+	    @RequestParam(required = false) String fechaTarjeta,
+	    @RequestParam(required = false) String cvv, 
+	    @RequestParam(required = false) String titular
+	) {
+	    return pedidoService.finalizarPedido(
+	        idPedido, 
+	        metodoPago, 
+	        comprobante, 
+	        numTarjeta, 
+	        fechaTarjeta, 
+	        cvv, 
+	        titular
+	    );
+	}
 	
-	@PostMapping(value = "/finalizar/{idPedido}", consumes = "multipart/form-data")
-    @PreAuthorize("hasRole('CONSUMIDOR')")
-    public Pedido finalizarPedido(
-            @PathVariable Integer idPedido,
-            @RequestParam String metodoPago,
-            @RequestParam(required = false) MultipartFile comprobante,
-            @RequestParam(required = false) String numTarjeta,
-            @RequestParam(required = false) String fechaTarjeta,
-            @RequestParam(required = false) String cvv,
-            @RequestParam(required = false) String titular
-    ) {
-        return pedidoService.finalizarPedido(
-                idPedido, metodoPago,
-                comprobante, numTarjeta, fechaTarjeta, cvv, titular
-        );
-    }
-
 	// ============================================================
 	// CREAR PEDIDO DESDE CARRITO
 	// ============================================================
-	
 	@PostMapping("/carrito")
 	public Pedido crearDesdeCarrito(@RequestBody PedidoCarritoRequest request) {
 		return pedidoService.crearPedidoDesdeCarrito(request);
@@ -181,7 +178,6 @@ public class PedidoController {
 	// ============================================================
 	// 📈 VENTAS MENSUALES
 	// ============================================================
-	
 	@GetMapping("/estadisticas/mensuales/{idVendedor}")
 	public ResponseEntity<?> ventasMensuales(@PathVariable Integer idVendedor) {
 		return ResponseEntity.ok(pedidoService.obtenerVentasMensuales(idVendedor));
@@ -190,8 +186,6 @@ public class PedidoController {
 	// ============================================================
 	// 🔒 DETALLE DE PEDIDO (CONSUMIDOR)
 	// ============================================================
-	
-	
 	@GetMapping("/{idPedido}")
 	@PreAuthorize("hasRole('CONSUMIDOR')")
 	public ResponseEntity<?> obtenerPedidoConsumidor(@PathVariable Integer idPedido, Authentication authentication) {
@@ -201,7 +195,6 @@ public class PedidoController {
 		Pedido pedido = pedidoRepository.findById(idPedido)
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Pedido no encontrado"));
 
-		// 🔐 VALIDACIÓN CLAVE
 		if (!pedido.getConsumidor().getUsuario().getIdUsuario().equals(usuario.getIdUsuario())) {
 			throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No autorizado para ver este pedido");
 		}
@@ -209,187 +202,157 @@ public class PedidoController {
 		return ResponseEntity.ok(pedido);
 	}
 
+	// ============================================================
+	// 🛒 PROCESAR CHECKOUT UNIFICADO (UN SOLO PEDIDO)
+	// ============================================================
 	@PostMapping("/checkout")
 	@PreAuthorize("hasRole('CONSUMIDOR')")
-	public ResponseEntity<List<PedidoDTO>> checkout(
+	public ResponseEntity<Pedido> checkout(
 	        @RequestBody CheckoutRequest request,
-	        Authentication authentication
-	) {
-	    // Obtener usuario autenticado por email
-	    Usuario usuario = usuarioRepository.findByCorreo(authentication.getName())
-	            .orElseThrow(() -> new ResponseStatusException(
-	                HttpStatus.UNAUTHORIZED, "Usuario no autenticado"
-	            ));
+	        Authentication authentication) {
+	    
+	    System.out.println("🔍 CHECKOUT REQUEST RECIBIDO");
+	    System.out.println("🔍 ID Consumidor: " + request.getIdConsumidor());
+	    System.out.println("🔍 Usuario autenticado: " + authentication.getName());
+	    
+	    try {
+	        Usuario usuario = usuarioRepository.findByCorreo(authentication.getName())
+	                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Usuario no autenticado"));
 
-	    // Buscar el consumidor asociado a ese usuario
+	        System.out.println("✅ Usuario encontrado: " + usuario.getCorreo());
 
-	    Consumidor consumidor = consumidorRepository.findByUsuario(usuario);
+	        Consumidor consumidor = consumidorRepository.findByUsuario(usuario);
 
-	    if (consumidor == null) {
-	        throw new ResponseStatusException(
-	            HttpStatus.FORBIDDEN, 
-	            "El usuario no está registrado como consumidor"
-	        );
+	        if (consumidor == null) {
+	            System.out.println("❌ Usuario no es consumidor");
+	            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "El usuario no está registrado como consumidor");
+	        }
+
+	        System.out.println("✅ Consumidor encontrado: " + consumidor.getIdConsumidor());
+
+	        if (!consumidor.getIdConsumidor().equals(request.getIdConsumidor())) {
+	            System.out.println("❌ ID de consumidor no coincide");
+	            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No puedes crear pedidos para otro usuario");
+	        }
+
+	        // 🔥 Llamar al nuevo método
+	        System.out.println("🔍 Llamando a checkoutUnificado...");
+	        Pedido pedidoUnico = pedidoService.checkoutUnificado(request.getIdConsumidor());
+
+	        System.out.println("✅ Pedido creado exitosamente: " + pedidoUnico.getIdPedido());
+
+	        return ResponseEntity.ok(pedidoUnico);
+	        
+	    } catch (Exception e) {
+	        System.out.println("❌ ERROR EN CHECKOUT CONTROLLER: " + e.getMessage());
+	        e.printStackTrace();
+	        throw e;
 	    }
-
-	    // Validar que el idConsumidor del request sea el mismo del usuario autenticado
-	    if (!consumidor.getIdConsumidor().equals(request.getIdConsumidor())) {
-	        throw new ResponseStatusException(
-	            HttpStatus.FORBIDDEN, 
-	            "No puedes crear pedidos para otro usuario"
-	        );
-	    }
-
-	    // Procesar checkout
-	    List<Pedido> pedidos = pedidoService.checkoutMultiVendedor(request.getIdConsumidor());
-
-	    List<PedidoDTO> response = pedidos.stream()
-	            .map(this::mapToDTO)
-	            .toList();
-
-	    return ResponseEntity.ok(response);
 	}
+	// ============================================================
+	// ❌ CANCELAR PEDIDO
+	// ============================================================
+	@PutMapping("/{idPedido}/cancelar")
+	@PreAuthorize("hasRole('CONSUMIDOR')")
+	public ResponseEntity<?> cancelarPedido(@PathVariable Integer idPedido, Authentication authentication) {
+		Usuario usuario = usuarioRepository.findByCorreo(authentication.getName())
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Usuario no válido"));
 
-	
-	private PedidoDTO mapToDTO(Pedido pedido) {
+		Pedido pedido = pedidoRepository.findById(idPedido)
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Pedido no existe"));
 
-	    PedidoDTO dto = new PedidoDTO();
+		if (!pedido.getConsumidor().getUsuario().getIdUsuario().equals(usuario.getIdUsuario())) {
+			return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+		}
 
-	    dto.setIdPedido(pedido.getIdPedido());
-	    dto.setNumeroPedido("PED-" + pedido.getIdPedido());
-
-	    // ✅ ENUM → String
-	    dto.setEstado(pedido.getEstadoPedido().name());
-
-	    dto.setSubtotal(pedido.getSubtotal());
-	    dto.setIva(pedido.getIva());
-	    dto.setTotal(pedido.getTotal());
-	    dto.setFechaPedido(pedido.getFechaPedido());
-
-	    // ================= CLIENTE =================
-	    if (pedido.getConsumidor() != null &&
-	        pedido.getConsumidor().getUsuario() != null) {
-
-	        dto.setClienteNombre(
-	            pedido.getConsumidor().getUsuario().getNombre() + " " +
-	            pedido.getConsumidor().getUsuario().getApellido()
-	        );
-	    } else {
-	        dto.setClienteNombre("Cliente");
-	    }
-
-	    // ================= VENDEDOR =================
-	    if (pedido.getVendedor() != null &&
-	        pedido.getVendedor().getUsuario() != null) {
-
-	        dto.setVendedorNombre(
-	            pedido.getVendedor().getUsuario().getNombre()
-	        );
-	    } else {
-	        dto.setVendedorNombre("Vendedor");
-	    }
-
-	    return dto;
+		return ResponseEntity.ok(pedidoService.cancelarPedido(idPedido));
 	}
-
 
 	// ============================================================
-    // ❌ CANCELAR PEDIDO
-    // ============================================================
-    @PutMapping("/{idPedido}/cancelar")
-    @PreAuthorize("hasRole('CONSUMIDOR')")
-    public ResponseEntity<?> cancelarPedido(
-            @PathVariable Integer idPedido,
-            Authentication authentication
-    ) {
-        Usuario usuario = usuarioRepository.findByCorreo(authentication.getName())
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.UNAUTHORIZED, "Usuario no válido"));
+	// 📦 MIS PEDIDOS (HISTORIAL CONSUMIDOR)
+	// ============================================================
+	@GetMapping("/mis-pedidos")
+	@PreAuthorize("hasRole('CONSUMIDOR')")
+	public List<PedidoResponse> misPedidos(Authentication authentication) {
+		Usuario usuario = usuarioRepository.findByCorreo(authentication.getName())
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Usuario no autenticado"));
 
-        Pedido pedido = pedidoRepository.findById(idPedido)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, "Pedido no existe"));
+		Consumidor consumidor = consumidorRepository.findByUsuario(usuario);
 
-        if (!pedido.getConsumidor().getUsuario().getIdUsuario()
-                .equals(usuario.getIdUsuario())) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-        }
+		if (consumidor == null) {
+			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Consumidor no encontrado");
+		}
 
-        return ResponseEntity.ok(pedidoService.cancelarPedido(idPedido));
-    }
+		return pedidoService.listarPedidosHistorial(consumidor.getIdConsumidor()).stream().map(PedidoMapper::toResponse)
+				.toList();
+	}
 
+	// ============================================================
+	// 🧾 FACTURA (SOLO DISPONIBLE TRAS EL PAGO)
+	// ============================================================
+	@GetMapping("/{idPedido}/factura")
+	@PreAuthorize("hasRole('CONSUMIDOR')")
+	public Pedido obtenerFactura(@PathVariable Integer idPedido, Authentication authentication) {
+		Usuario usuario = usuarioRepository.findByCorreo(authentication.getName())
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Usuario no autenticado"));
 
+		Pedido pedido = pedidoRepository.findById(idPedido)
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Pedido no encontrado"));
 
-    // ============================================================
-    // 📦 MIS PEDIDOS (HISTORIAL LIMPIO)
-    // ============================================================
-    @GetMapping("/mis-pedidos")
-    @PreAuthorize("hasRole('CONSUMIDOR')")
-    public List<PedidoResponse> misPedidos(Authentication authentication) {
+		if (!pedido.getConsumidor().getUsuario().getIdUsuario().equals(usuario.getIdUsuario())) {
+			throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No autorizado");
+		}
 
-        Usuario usuario = usuarioRepository.findByCorreo(authentication.getName())
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.UNAUTHORIZED, "Usuario no autenticado"));
+		if (pedido.getEstadoPedido() == EstadoPedido.PENDIENTE || pedido.getEstadoPedido() == EstadoPedido.PROCESANDO) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La factura aún no está disponible");
+		}
 
-        Consumidor consumidor = consumidorRepository.findByUsuario(usuario);
+		return pedido;
+	}
 
-        if (consumidor == null) {
-            throw new ResponseStatusException(
-                    HttpStatus.NOT_FOUND, "Consumidor no encontrado");
-        }
+	// ============================================================
+	// 📍 ACTUALIZAR ESTADO DE SEGUIMIENTO
+	// ============================================================
+	@PatchMapping("/{id}/estado-seguimiento")
+	public ResponseEntity<Pedido> cambiarEstadoSeguimiento(@PathVariable Integer id, @RequestParam String estado) {
+		return ResponseEntity.ok(pedidoService.cambiarEstadoSeguimiento(id, estado));
+	}
 
-        return pedidoService
-                .listarPedidosHistorial(consumidor.getIdConsumidor())
-                .stream()
-                .map(PedidoMapper::toResponse) // 🔑 AQUÍ
-                .toList();
-    }
+	// ============================================================
+	// 🏪 LISTAR PEDIDOS PARA DASHBOARD VENDEDOR (TABLA PUENTE)
+	// ============================================================
+	@GetMapping("/vendedor/dashboard/{idVendedor}")
+	@PreAuthorize("hasRole('VENDEDOR')")
+	public ResponseEntity<List<PedidoVendedor>> listarPedidosDashboard(@PathVariable Integer idVendedor) {
+		List<PedidoVendedor> pedidos = pedidoService.listarPedidosParaDashboardVendedor(idVendedor);
+		return ResponseEntity.ok(pedidos);
+	}
 
+	// ============================================================
+	// 🔘 CAMBIAR ESTADO OPERATIVO DEL VENDEDOR (BOTONES DASHBOARD)
+	// ============================================================
+	@PutMapping("/operativo/{idPedidoVendedor}/estado")
+	@PreAuthorize("hasRole('VENDEDOR')")
+	public ResponseEntity<?> actualizarEstadoVendedor(@PathVariable Integer idPedidoVendedor,
+			@RequestParam String nuevoEstado) {
+		try {
+			pedidoService.actualizarEstadoOperativo(idPedidoVendedor, nuevoEstado);
+			return ResponseEntity.ok().body("{\"message\": \"Estado del vendedor actualizado\"}");
+		} catch (Exception e) {
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+		}
+	}
 
- // ============================================================
-    // 🧾 FACTURA (SOLO SI YA PAGÓ O ESTÁ EN VERIFICACIÓN)
-    // ============================================================
-    @GetMapping("/{idPedido}/factura")
-    @PreAuthorize("hasRole('CONSUMIDOR')")
-    public Pedido obtenerFactura(
-            @PathVariable Integer idPedido,
-            Authentication authentication
-    ) {
-        Usuario usuario = usuarioRepository.findByCorreo(authentication.getName())
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.UNAUTHORIZED, "Usuario no autenticado"));
+	// ============================================================
+	// 📋 DETALLES ESPECÍFICOS DE PRODUCTOS POR VENDEDOR
+	// ============================================================
+	@GetMapping("/vendedor/{idVendedor}/pedido/{idPedido}/detalles")
+	@PreAuthorize("hasRole('VENDEDOR')")
+	public ResponseEntity<List<DetallePedido>> obtenerDetallesEspecificos(@PathVariable Integer idVendedor,
+			@PathVariable Integer idPedido) {
 
-        Pedido pedido = pedidoRepository.findById(idPedido)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, "Pedido no encontrado"));
-
-        if (!pedido.getConsumidor().getUsuario().getIdUsuario()
-                .equals(usuario.getIdUsuario())) {
-            throw new ResponseStatusException(
-                    HttpStatus.FORBIDDEN, "No autorizado");
-        }
-
-        if (pedido.getEstadoPedido() == EstadoPedido.PENDIENTE
-                || pedido.getEstadoPedido() == EstadoPedido.PROCESANDO) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
-                    "La factura aún no está disponible");
-        }
-
-        return pedido;
-    }
-
-    
-    
-    @PatchMapping("/{id}/estado-seguimiento")
-    public ResponseEntity<Pedido> cambiarEstadoSeguimiento(
-            @PathVariable Integer id,
-            @RequestParam String estado
-    ) {
-        return ResponseEntity.ok(
-            pedidoService.cambiarEstadoSeguimiento(id, estado)
-        );
-    }
+		List<DetallePedido> detalles = pedidoService.listarDetallesPorVendedor(idPedido, idVendedor);
+		return ResponseEntity.ok(detalles);
+	}
 
 }
-

@@ -5,6 +5,7 @@ import java.util.List;
 import com.mercadolocalia.dto.EstadisticasDTO;
 import com.mercadolocalia.dto.PedidoDTO;
 import com.mercadolocalia.dto.VendedorRequest;
+import com.mercadolocalia.entities.PedidoVendedor;
 import com.mercadolocalia.entities.Vendedor;
 
 public interface VendedorService {
@@ -29,4 +30,7 @@ public interface VendedorService {
     // ADMIN / CONSULTAS GENERALES
     // ============================================================
     List<Vendedor> listarTodos();
+    
+    // En VendedorService.java
+    List<PedidoVendedor> listarMisPedidos(Integer idVendedor);
 }
