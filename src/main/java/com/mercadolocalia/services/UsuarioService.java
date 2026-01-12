@@ -3,6 +3,7 @@ package com.mercadolocalia.services;
 import java.util.List;
 
 import com.mercadolocalia.dto.UsuarioResponse;
+import com.mercadolocalia.dto.ActualizarPerfilRequest;
 import com.mercadolocalia.dto.UsuarioPerfilDTO;
 import com.mercadolocalia.dto.UsuarioRequest;
 import com.mercadolocalia.entities.Usuario;
@@ -19,4 +20,6 @@ public interface UsuarioService {
 
     // ⭐ NUEVO → ELIMINAR USUARIO
     void eliminarUsuario(Integer id);
+    
+    UsuarioPerfilDTO actualizarPerfil(String correo, ActualizarPerfilRequest request);
 }

@@ -1,5 +1,7 @@
 package com.mercadolocalia.repositories;
 
+import java.util.Optional;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import com.mercadolocalia.entities.Consumidor;
@@ -11,4 +13,5 @@ public interface ConsumidorRepository extends JpaRepository<Consumidor, Integer>
     Consumidor findByUsuario(Usuario usuario);
 
     boolean existsByUsuario(Usuario usuario);
+    
 }

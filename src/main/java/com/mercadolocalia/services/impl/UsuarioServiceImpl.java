@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import com.mercadolocalia.dto.ActualizarPerfilRequest;
 import com.mercadolocalia.dto.UsuarioPerfilDTO;
 import com.mercadolocalia.dto.UsuarioRequest;
 import com.mercadolocalia.dto.UsuarioResponse;
@@ -19,23 +20,33 @@ import com.mercadolocalia.repositories.UsuarioRepository;
 import com.mercadolocalia.repositories.VendedorRepository;
 import com.mercadolocalia.services.UsuarioService;
 
+import jakarta.transaction.Transactional;
+
 @Service
 public class UsuarioServiceImpl implements UsuarioService {
 
-    @Autowired private UsuarioRepository usuarioRepo;
-    @Autowired private RolRepository rolRepo;
-    @Autowired private PasswordEncoder passwordEncoder;
-    @Autowired private UsuarioRepository usuarioRepository;
-    @Autowired private ConsumidorRepository consumidorRepository;
-    @Autowired private VendedorRepository vendedorRepository;
-    
+    @Autowired
+    private UsuarioRepository usuarioRepository;
+
+    @Autowired
+    private RolRepository rolRepository;
+
+    @Autowired
+    private ConsumidorRepository consumidorRepository;
+
+    @Autowired
+    private VendedorRepository vendedorRepository;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
     // ====================================================
-    // OBTENER PERFIL (para el usuario logueado)
+    // OBTENER PERFIL (Usuario logueado)
     // ====================================================
     @Override
     public UsuarioPerfilDTO obtenerPerfilDTO(String correo) {
 
-        Usuario u = usuarioRepository.findByCorreo(correo)
+        Usuario usuario = usuarioRepository.findByCorreo(correo)
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
         Integer idConsumidor = null;
@@ -50,45 +61,42 @@ public class UsuarioServiceImpl implements UsuarioService {
         String rucEmpresa = null;
         Double calificacionPromedio = null;
 
-        if (u.getRol().getNombreRol().equals("CONSUMIDOR")) {
+        String rol = usuario.getRol().getNombreRol();
 
-            Consumidor c = consumidorRepository.findByUsuario(u);
-            if (c == null) {
+        if ("CONSUMIDOR".equals(rol)) {
+            Consumidor consumidor = consumidorRepository.findByUsuario(usuario);
+            if (consumidor == null) {
                 throw new RuntimeException("Consumidor no encontrado");
             }
 
-            idConsumidor = c.getIdConsumidor();
-            direccionConsumidor = c.getDireccionConsumidor();
-            telefonoConsumidor = c.getTelefonoConsumidor();
-            cedulaConsumidor = c.getCedulaConsumidor();
+            idConsumidor = consumidor.getIdConsumidor();
+            direccionConsumidor = consumidor.getDireccionConsumidor();
+            telefonoConsumidor = consumidor.getTelefonoConsumidor();
+            cedulaConsumidor = consumidor.getCedulaConsumidor();
         }
 
-        if (u.getRol().getNombreRol().equals("VENDEDOR")) {
+        if ("VENDEDOR".equals(rol)) {
+            Vendedor vendedor = vendedorRepository.findByUsuario(usuario)
+                    .orElseThrow(() -> new RuntimeException("Vendedor no encontrado"));
 
-        	Vendedor v = vendedorRepository.findByUsuario(u)
-        	        .orElseThrow(() -> new RuntimeException("El usuario no es vendedor"));
-            if (v == null) {
-                throw new RuntimeException("Vendedor no encontrado");
-            }
-
-            idVendedor = v.getIdVendedor();
-            nombreEmpresa = v.getNombreEmpresa();
-            direccionEmpresa = v.getDireccionEmpresa();
-            telefonoEmpresa = v.getTelefonoEmpresa();
-            rucEmpresa = v.getRucEmpresa();
-            calificacionPromedio = v.getCalificacionPromedio();
+            idVendedor = vendedor.getIdVendedor();
+            nombreEmpresa = vendedor.getNombreEmpresa();
+            direccionEmpresa = vendedor.getDireccionEmpresa();
+            telefonoEmpresa = vendedor.getTelefonoEmpresa();
+            rucEmpresa = vendedor.getRucEmpresa();
+            calificacionPromedio = vendedor.getCalificacionPromedio();
         }
 
         return new UsuarioPerfilDTO(
-                u.getIdUsuario(),
-                u.getNombre(),
-                u.getApellido(),
-                u.getCorreo(),
-                u.getFechaNacimiento(),
-                u.getRol().getNombreRol(),
-                u.getEsAdministrador(),
-                u.getFechaRegistro(),
-                u.getEstado(),
+                usuario.getIdUsuario(),
+                usuario.getNombre(),
+                usuario.getApellido(),
+                usuario.getCorreo(),
+                usuario.getFechaNacimiento(),
+                rol,
+                usuario.getEsAdministrador(),
+                usuario.getFechaRegistro(),
+                usuario.getEstado(),
 
                 idConsumidor,
                 direccionConsumidor,
@@ -109,90 +117,155 @@ public class UsuarioServiceImpl implements UsuarioService {
     // ====================================================
     @Override
     public List<UsuarioResponse> listarUsuarios() {
-        return usuarioRepo.findAll().stream().map(u -> new UsuarioResponse(
-                u.getIdUsuario(),
-                u.getNombre(),
-                u.getApellido(),
-                u.getCorreo(),
-                "********",                      // Nunca enviar hash
-                u.getFechaNacimiento(),
-                u.getRol().getNombreRol(),
-                u.getEsAdministrador(),
-                u.getFechaRegistro(),
-                u.getEstado()
-        )).toList();
+        return usuarioRepository.findAll().stream()
+                .map(u -> new UsuarioResponse(
+                        u.getIdUsuario(),
+                        u.getNombre(),
+                        u.getApellido(),
+                        u.getCorreo(),
+                        "********",
+                        u.getFechaNacimiento(),
+                        u.getRol().getNombreRol(),
+                        u.getEsAdministrador(),
+                        u.getFechaRegistro(),
+                        u.getEstado()
+                ))
+                .toList();
     }
 
     // ====================================================
-    // CAMBIAR ESTADO (Activo / Suspendido)
+    // CAMBIAR ESTADO
     // ====================================================
     @Override
     public String cambiarEstado(Integer id) {
-        Usuario user = usuarioRepo.findById(id)
+
+        Usuario usuario = usuarioRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
-        if (user.getEstado() == null) {
-            user.setEstado("Activo");
+        if (usuario.getEstado() == null || usuario.getEstado().equalsIgnoreCase("Suspendido")) {
+            usuario.setEstado("Activo");
         } else {
-            user.setEstado(user.getEstado().equalsIgnoreCase("Activo") ? "Suspendido" : "Activo");
+            usuario.setEstado("Suspendido");
         }
 
-        usuarioRepo.save(user);
-        return user.getEstado();
+        usuarioRepository.save(usuario);
+        return usuario.getEstado();
     }
 
     // ====================================================
-    // ACTUALIZAR USUARIO COMPLETO (ADMIN)
+    // ACTUALIZAR USUARIO (ADMIN)
     // ====================================================
     @Override
     public UsuarioResponse actualizarUsuario(Integer id, UsuarioRequest req) {
 
-        Usuario u = usuarioRepo.findById(id)
+        Usuario usuario = usuarioRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
-        u.setNombre(req.nombre());
-        u.setApellido(req.apellido());
-        u.setCorreo(req.correo());
-        u.setFechaNacimiento(req.fechaNacimiento());
-        u.setEstado(req.estado());
+        usuario.setNombre(req.nombre());
+        usuario.setApellido(req.apellido());
+        usuario.setCorreo(req.correo());
+        usuario.setFechaNacimiento(req.fechaNacimiento());
+        usuario.setEstado(req.estado());
 
-        // ==============================
-        // Si se envía nueva contraseña
-        // ==============================
         if (req.contrasena() != null && !req.contrasena().isBlank()) {
-            u.setContrasena(passwordEncoder.encode(req.contrasena()));
+            usuario.setContrasena(passwordEncoder.encode(req.contrasena()));
         }
 
-        // ==============================
-        // Cambio de Rol
-        // ==============================
-        Rol nuevoRol = rolRepo.findByNombreRol(req.rol())
+        Rol rol = rolRepository.findByNombreRol(req.rol())
                 .orElseThrow(() -> new RuntimeException("Rol no válido"));
 
-        u.setRol(nuevoRol);
+        usuario.setRol(rol);
 
-        usuarioRepo.save(u);
+        usuarioRepository.save(usuario);
 
         return new UsuarioResponse(
-                u.getIdUsuario(),
-                u.getNombre(),
-                u.getApellido(),
-                u.getCorreo(),
-                "********",                      // No retornar contraseña
-                u.getFechaNacimiento(),
-                u.getRol().getNombreRol(),
-                u.getEsAdministrador(),
-                u.getFechaRegistro(),
-                u.getEstado()
+                usuario.getIdUsuario(),
+                usuario.getNombre(),
+                usuario.getApellido(),
+                usuario.getCorreo(),
+                "********",
+                usuario.getFechaNacimiento(),
+                usuario.getRol().getNombreRol(),
+                usuario.getEsAdministrador(),
+                usuario.getFechaRegistro(),
+                usuario.getEstado()
         );
     }
-    
+
+    // ====================================================
+    // ELIMINAR USUARIO
+    // ====================================================
     @Override
     public void eliminarUsuario(Integer id) {
-        Usuario user = usuarioRepo.findById(id)
+
+        Usuario usuario = usuarioRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
-        usuarioRepo.delete(user);
+        usuarioRepository.delete(usuario);
     }
+
+ // ====================================================
+ // ACTUALIZAR PERFIL (Usuario logueado)
+ // ====================================================
+ @Override
+ @Transactional
+ public UsuarioPerfilDTO actualizarPerfil(String correo, ActualizarPerfilRequest request) {
+
+     Usuario usuario = usuarioRepository.findByCorreo(correo)
+             .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+
+     // -------- DATOS BASE USUARIO --------
+     if (request.getNombre() != null) {
+         usuario.setNombre(request.getNombre());
+     }
+     if (request.getApellido() != null) {
+         usuario.setApellido(request.getApellido());
+     }
+     if (request.getFechaNacimiento() != null) {
+         usuario.setFechaNacimiento(request.getFechaNacimiento());
+     }
+
+     usuarioRepository.save(usuario);
+
+     String rol = usuario.getRol().getNombreRol();
+
+     // ================= CONSUMIDOR =================
+     if ("CONSUMIDOR".equalsIgnoreCase(rol)) {
+
+         Consumidor consumidor = consumidorRepository.findByUsuario(usuario);
+
+         if (consumidor == null) {
+             throw new RuntimeException("Consumidor no encontrado");
+         }
+
+         if (request.getDireccionConsumidor() != null) {
+             consumidor.setDireccionConsumidor(request.getDireccionConsumidor());
+         }
+         if (request.getTelefonoConsumidor() != null) {
+             consumidor.setTelefonoConsumidor(request.getTelefonoConsumidor());
+         }
+
+         consumidorRepository.save(consumidor);
+     }
+
+     // ================= VENDEDOR =================
+     if ("VENDEDOR".equalsIgnoreCase(rol)) {
+
+         Vendedor vendedor = vendedorRepository.findByUsuario(usuario)
+                 .orElseThrow(() -> new RuntimeException("Vendedor no encontrado"));
+
+         if (request.getDireccionEmpresa() != null) {
+             vendedor.setDireccionEmpresa(request.getDireccionEmpresa());
+         }
+         if (request.getTelefonoEmpresa() != null) {
+             vendedor.setTelefonoEmpresa(request.getTelefonoEmpresa());
+         }
+
+         vendedorRepository.save(vendedor);
+     }
+
+     return obtenerPerfilDTO(correo);
+ }
+
 
 }

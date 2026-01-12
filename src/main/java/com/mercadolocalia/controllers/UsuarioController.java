@@ -7,6 +7,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import com.mercadolocalia.dto.UsuarioResponse;
+import com.mercadolocalia.dto.ActualizarPerfilRequest;
 import com.mercadolocalia.dto.UsuarioPerfilDTO;
 import com.mercadolocalia.dto.UsuarioRequest;
 import com.mercadolocalia.entities.Usuario;
@@ -55,5 +56,13 @@ public class UsuarioController {
     public String eliminarUsuario(@PathVariable Integer id) {
         usuarioService.eliminarUsuario(id);
         return "Usuario eliminado correctamente";
+    }
+    
+    @PutMapping("/usuarios/perfil")
+    public UsuarioPerfilDTO actualizarPerfil(
+        Authentication auth,
+        @RequestBody ActualizarPerfilRequest request
+    ) {
+        return usuarioService.actualizarPerfil(auth.getName(), request);
     }
 }
