@@ -10,6 +10,7 @@ import com.mercadolocalia.dto.CarritoResponse;
 import com.mercadolocalia.dto.ProductoSimpleResponse;
 import com.mercadolocalia.entities.Carrito;
 import com.mercadolocalia.entities.CarritoItem;
+import com.mercadolocalia.entities.Producto;
 import com.mercadolocalia.repositories.CarritoItemRepository;
 import com.mercadolocalia.repositories.CarritoRepository;
 import com.mercadolocalia.repositories.ConsumidorRepository;
@@ -73,7 +74,7 @@ public class CarritoServiceImpl implements CarritoService {
                         new ProductoSimpleResponse(
                             p.getIdProducto(),
                             p.getNombreProducto(),
-                            p.getPrecioProducto(), // 👈 este es tu campo REAL
+                            p.getPrecioProducto(),
                             p.getImagenProducto()
                         );
 
@@ -91,23 +92,57 @@ public class CarritoServiceImpl implements CarritoService {
     }
 
     // ==================================================
-    // 🛒 AGREGAR ITEM
+    // 🛒 AGREGAR ITEM (CORREGIDO - EVITA DUPLICADOS)
     // ==================================================
     @Override
+    @Transactional
     public String agregarItem(Integer idConsumidor, Integer idProducto, Integer cantidad) {
 
+        // Paso 1: Obtener o crear el carrito del consumidor
         Carrito carrito = obtenerCarrito(idConsumidor);
+        
+        // Paso 2: Validar que el producto existe
+        Producto producto = productoRepository.findById(idProducto)
+            .orElseThrow(() -> new RuntimeException("Producto no encontrado"));
 
-        CarritoItem item = new CarritoItem();
-        item.setCarrito(carrito);
-        item.setProducto(
-            productoRepository.findById(idProducto).orElseThrow()
-        );
-        item.setCantidad(cantidad);
+        // 🔍 PASO CLAVE: Verificar si el producto YA existe en el carrito
+        // Buscamos en los items del carrito si ya hay uno con este idProducto
+        CarritoItem itemExistente = carrito.getItems()
+            .stream()
+            .filter(item -> item.getProducto().getIdProducto().equals(idProducto))
+            .findFirst()
+            .orElse(null);
 
-        carritoItemRepository.save(item);
-
-        return "Producto agregado al carrito.";
+        if (itemExistente != null) {
+            // ✅ CASO 1: El producto YA existe en el carrito
+            // → Actualizamos la cantidad (sumamos la nueva cantidad a la existente)
+            Integer nuevaCantidad = itemExistente.getCantidad() + cantidad;
+            itemExistente.setCantidad(nuevaCantidad);
+            carritoItemRepository.save(itemExistente);
+            
+            System.out.println("✅ [Backend] Producto existente actualizado:");
+            System.out.println("   - idItem: " + itemExistente.getIdItem());
+            System.out.println("   - Cantidad anterior: " + (nuevaCantidad - cantidad));
+            System.out.println("   - Cantidad agregada: " + cantidad);
+            System.out.println("   - Cantidad nueva: " + nuevaCantidad);
+            
+            return "Cantidad actualizada en el carrito. Nueva cantidad: " + nuevaCantidad;
+        } else {
+            // ➕ CASO 2: El producto NO existe en el carrito
+            // → Creamos un nuevo CarritoItem
+            CarritoItem nuevoItem = new CarritoItem();
+            nuevoItem.setCarrito(carrito);
+            nuevoItem.setProducto(producto);
+            nuevoItem.setCantidad(cantidad);
+            
+            carritoItemRepository.save(nuevoItem);
+            
+            System.out.println("➕ [Backend] Nuevo producto agregado:");
+            System.out.println("   - idProducto: " + idProducto);
+            System.out.println("   - Cantidad: " + cantidad);
+            
+            return "Producto agregado al carrito.";
+        }
     }
 
     // ==================================================
