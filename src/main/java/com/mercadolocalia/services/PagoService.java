@@ -39,8 +39,8 @@ public class PagoService {
 			break;
 
 		case TRANSFERENCIA:
-			estadoPago = EstadoPago.PENDIENTE_VERIFICACION;
-			estadoPedido = EstadoPedido.PENDIENTE_VERIFICACION;
+			estadoPago = EstadoPago.EN_VERIFICACION;
+			estadoPedido = EstadoPedido.PENDIENTE;
 			break;
 
 		default:

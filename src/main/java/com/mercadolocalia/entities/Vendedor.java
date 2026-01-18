@@ -12,7 +12,11 @@ public class Vendedor {
     private Integer idVendedor;
 
     @OneToOne
-    @JoinColumn(name = "id_usuario", nullable = false)
+    @JoinColumn(
+    	    name = "id_usuario",
+    	    nullable = false,
+    	    unique = true
+    	)
     private Usuario usuario;
 
     @Column(name = "nombre_empresa", nullable = false, length = 100)

@@ -12,7 +12,11 @@ public class Consumidor {
     private Integer idConsumidor;
 
     @OneToOne
-    @JoinColumn(name = "id_usuario", nullable = false)
+    @JoinColumn(
+    	    name = "id_usuario",
+    	    nullable = false,
+    	    unique = true
+    	)
     private Usuario usuario;
 
     @Column(name = "cedula_consumidor", nullable = false, unique = true, length = 10)

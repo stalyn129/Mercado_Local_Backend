@@ -1,62 +1,51 @@
 package com.mercadolocalia.services;
 
+import com.mercadolocalia.dto.*;
+import com.mercadolocalia.entities.*;
+import org.springframework.web.multipart.MultipartFile;
+
 import java.util.List;
 import java.util.Map;
 
-import org.springframework.web.multipart.MultipartFile;
-
-import com.mercadolocalia.dto.PedidoCarritoRequest;
-import com.mercadolocalia.dto.PedidoRequest;
-import com.mercadolocalia.entities.Pedido;
-import com.mercadolocalia.entities.PedidoVendedor;
-import com.mercadolocalia.entities.DetallePedido;
-
 public interface PedidoService {
-
-    Pedido crearPedido(PedidoRequest request);
-
-    Pedido obtenerPedidoPorId(Integer id);
-
-    List<Pedido> listarPedidosPorConsumidor(Integer idConsumidor);
-
-    List<Pedido> listarPedidosPorVendedor(Integer idVendedor);
-
-    List<DetallePedido> listarDetalles(Integer idPedido);
-
-    Pedido cambiarEstado(Integer idPedido, String nuevoEstado);
     
-    Pedido cambiarEstadoSeguimiento(Integer idPedido, String nuevoEstadoSeguimiento);
-
-    Pedido comprarAhora(PedidoRequest request);
-
+    // Métodos básicos
+    Pedido crearPedido(PedidoRequest request);
+    Pedido obtenerPedidoPorId(Integer id);
+    List<Pedido> listarPedidosPorConsumidor(Integer idConsumidor);
+    List<Pedido> listarPedidosPorVendedor(Integer idVendedor);
+    List<DetallePedido> listarDetalles(Integer idPedido);
+    
+    // Cambios de estado
+    Pedido cambiarEstado(Integer idPedido, String estado);
+    Pedido cambiarEstadoSeguimiento(Integer idPedido, String estado);
+    
+    // Pago
     Pedido finalizarPedido(Integer idPedido, String metodoPago);
-
-    Pedido finalizarPedido(
-        Integer idPedido,
-        String metodoPago,
-        MultipartFile comprobante,
-        String numTarjeta,
-        String fechaTarjeta,
-        String cvv,
-        String titular
-    );
-
+    Pedido finalizarPedido(Integer idPedido, String metodoPago, MultipartFile comprobante,
+                          String numTarjeta, String fechaTarjeta, String cvv, String titular);
+    
+    // Carrito y checkout
+    Pedido comprarAhora(PedidoRequest request);
     Pedido crearPedidoDesdeCarrito(PedidoCarritoRequest request);
-
+    List<Pedido> checkoutMultiVendedor(Integer idConsumidor);
+    Pedido checkoutUnificado(Integer idConsumidor);
+    
+    // Cancelación
+    Pedido cancelarPedido(Integer idPedido);
+    
+    // Historial
+    List<Pedido> listarPedidosHistorial(Integer idConsumidor);
+    List<Pedido> listarPedidosHistorial(Consumidor consumidor);
+    
+    // Estadísticas y reportes
     Map<String, Object> obtenerEstadisticasVendedor(Integer idVendedor);
-
     List<Map<String, Object>> obtenerVentasMensuales(Integer idVendedor);
     
-    List<Pedido> checkoutMultiVendedor(Integer idConsumidor);
-    
-    Pedido cancelarPedido(Integer idPedido);
-
-    List<Pedido> listarPedidosHistorial(Integer idConsumidor);
-
-    void actualizarEstadoOperativo(Integer idPedidoVendedor, String nuevoEstado);
+    // Dashboard vendedor (PedidoVendedor)
     List<PedidoVendedor> listarPedidosParaDashboardVendedor(Integer idVendedor);
+    void actualizarEstadoOperativo(Integer idPedidoVendedor, String estado);
     
+    // Detalles específicos por vendedor
     List<DetallePedido> listarDetallesPorVendedor(Integer idPedido, Integer idVendedor);
- 
-    Pedido checkoutUnificado(Integer idConsumidor);
 }

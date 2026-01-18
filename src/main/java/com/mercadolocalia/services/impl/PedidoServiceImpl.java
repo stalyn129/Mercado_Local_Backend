@@ -2,39 +2,20 @@ package com.mercadolocalia.services.impl;
 
 import java.io.File;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
+import java.util.*;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import com.mercadolocalia.dto.DetallePedidoAddRequest;
-import com.mercadolocalia.dto.PedidoCarritoRequest;
-import com.mercadolocalia.dto.PedidoRequest;
-import com.mercadolocalia.entities.Carrito;
-import com.mercadolocalia.entities.CarritoItem;
-import com.mercadolocalia.entities.Consumidor;
-import com.mercadolocalia.entities.DetallePedido;
-import com.mercadolocalia.entities.EstadoPedido;
-import com.mercadolocalia.entities.EstadoPedidoVendedor;
-import com.mercadolocalia.entities.EstadoSeguimientoPedido;
-import com.mercadolocalia.entities.Pedido;
-import com.mercadolocalia.entities.PedidoVendedor;
-import com.mercadolocalia.entities.Producto;
-import com.mercadolocalia.entities.Vendedor;
-import com.mercadolocalia.repositories.CarritoItemRepository;
-import com.mercadolocalia.repositories.CarritoRepository;
-import com.mercadolocalia.repositories.ConsumidorRepository;
-import com.mercadolocalia.repositories.DetallePedidoRepository;
-import com.mercadolocalia.repositories.PedidoRepository;
-import com.mercadolocalia.repositories.PedidoVendedorRepository;
-import com.mercadolocalia.repositories.ProductoRepository;
-import com.mercadolocalia.repositories.VendedorRepository;
-import com.mercadolocalia.services.NotificacionService;
-import com.mercadolocalia.services.PedidoService;
+import com.mercadolocalia.dto.*;
+import com.mercadolocalia.entities.*;
+import com.mercadolocalia.repositories.*;
+import com.mercadolocalia.services.*;
 
 import jakarta.transaction.Transactional;
 
@@ -206,7 +187,7 @@ public class PedidoServiceImpl implements PedidoService {
 		switch (estadoNuevo) {
 
 		case PROCESANDO:
-		case PENDIENTE_VERIFICACION:
+		case PENDIENTE:
 		case COMPLETADO:
 		case CANCELADO:
 			pedido.setEstadoPedido(estadoNuevo);
@@ -262,7 +243,7 @@ public class PedidoServiceImpl implements PedidoService {
 	    // ==========================
 	    else if (metodoPago.equalsIgnoreCase("TRANSFERENCIA")) {
 
-	        pedido.setEstadoPedido(EstadoPedido.PENDIENTE_VERIFICACION);
+	        pedido.setEstadoPedido(EstadoPedido.PENDIENTE);
 
 	    }
 	    // ==========================
@@ -358,7 +339,7 @@ public class PedidoServiceImpl implements PedidoService {
 	         comprobante.transferTo(archivo);
 
 	         pedido.setComprobanteUrl("/uploads/comprobantes/" + nombre);
-	         pedido.setEstadoPedido(EstadoPedido.PENDIENTE_VERIFICACION);
+	         pedido.setEstadoPedido(EstadoPedido.PENDIENTE);
 
 	     } catch (Exception e) {
 	         // ✅ MOSTRAR ERROR REAL
@@ -859,6 +840,56 @@ public class PedidoServiceImpl implements PedidoService {
 	        e.printStackTrace();
 	        throw e;
 	    }
+	}
+
+	@Override
+	public List<Pedido> listarPedidosHistorial(Consumidor consumidor) {
+	    // Validar que el consumidor exista
+	    if (consumidor == null) {
+	        throw new IllegalArgumentException("El consumidor no puede ser nulo");
+	    }
+	    
+	    // Verificar que el consumidor tenga un ID válido
+	    if (consumidor.getIdConsumidor() == null) {
+	        throw new RuntimeException("El consumidor no tiene un ID válido");
+	    }
+	    
+	    // Obtener todos los pedidos del consumidor
+	    List<Pedido> todosPedidos = pedidoRepository.findByConsumidor_IdConsumidorOrderByFechaPedidoDesc(
+	        consumidor.getIdConsumidor()
+	    );
+	    
+	    // Si no hay pedidos, devolver lista vacía
+	    if (todosPedidos == null || todosPedidos.isEmpty()) {
+	        return new ArrayList<>();
+	    }
+	    
+	    // Filtrar pedidos según tu lógica de negocio
+	    List<Pedido> pedidosFiltrados = todosPedidos.stream()
+	        .filter(pedido -> {
+	            // Excluir pedidos cancelados del historial
+	            if (pedido.getEstadoPedido() == EstadoPedido.CANCELADO) {
+	                return false;
+	            }
+	            
+	            // Verificar que el pedido tenga detalles
+	            if (pedido.getDetalles() == null || pedido.getDetalles().isEmpty()) {
+	                return false;
+	            }
+	            
+	            // Verificar que el pedido tenga un total mayor a 0
+	            if (pedido.getTotal() == null || pedido.getTotal() <= 0) {
+	                return false;
+	            }
+	            
+	            return true;
+	        })
+	        .collect(Collectors.toList());
+	    
+	    // Opcional: Ordenar por fecha de creación (ya debería estar ordenado por el repositorio)
+	    pedidosFiltrados.sort(Comparator.comparing(Pedido::getFechaPedido).reversed());
+	    
+	    return pedidosFiltrados;
 	}
 
 }

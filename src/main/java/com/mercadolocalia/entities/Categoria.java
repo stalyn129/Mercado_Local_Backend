@@ -1,5 +1,6 @@
 package com.mercadolocalia.entities;
 
+import java.time.LocalDateTime;
 import jakarta.persistence.*;
 
 @Entity
@@ -17,6 +18,13 @@ public class Categoria {
     @Column(name = "descripcion_categoria")
     private String descripcionCategoria;
 
+    @Column(name = "fecha_creacion", nullable = false, updatable = false)
+    private LocalDateTime fechaCreacion;
+
+    @PrePersist
+    protected void onCreate() {
+        this.fechaCreacion = LocalDateTime.now();
+    }
     // ============================
     // GETTERS & SETTERS
     // ============================
@@ -43,5 +51,13 @@ public class Categoria {
 
     public void setDescripcionCategoria(String descripcionCategoria) {
         this.descripcionCategoria = descripcionCategoria;
+    }
+
+    public LocalDateTime getFechaCreacion() {
+        return fechaCreacion;
+    }
+
+    public void setFechaCreacion(LocalDateTime fechaCreacion) {
+        this.fechaCreacion = fechaCreacion;
     }
 }

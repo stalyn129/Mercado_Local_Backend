@@ -43,8 +43,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             path.startsWith("/v3/api-docs") ||
             path.startsWith("/api-docs") ||
             (path.startsWith("/productos") && request.getMethod().equals("GET")) ||
-            (path.startsWith("/categorias") && request.getMethod().equals("GET")) ||
-            (path.startsWith("/subcategorias") && request.getMethod().equals("GET"))
+            (path.startsWith("/api/categorias") && request.getMethod().equals("GET")) ||
+            (path.startsWith("/api/subcategorias") && request.getMethod().equals("GET"))
         ) {
             filterChain.doFilter(request, response);
             return;

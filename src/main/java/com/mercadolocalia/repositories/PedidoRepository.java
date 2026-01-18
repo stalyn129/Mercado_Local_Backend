@@ -88,6 +88,8 @@ public interface PedidoRepository extends JpaRepository<Pedido, Integer> {
     		    EstadoPedido estado
     		);
 
+    	// En PedidoRepository, agrega este método:
+    	List<Pedido> findByConsumidor_IdConsumidorOrderByFechaPedidoDesc(Integer idConsumidor);
     	
 
 }

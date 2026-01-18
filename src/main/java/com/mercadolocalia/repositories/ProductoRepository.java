@@ -28,7 +28,15 @@ public interface ProductoRepository extends JpaRepository<Producto, Integer> {
     Integer countByVendedor(Vendedor vendedor);
     
     List<Producto> findBySubcategoria_NombreSubcategoriaContainingIgnoreCase(String nombre);
-
+        
+    List<Producto> findByNombreProductoContainingIgnoreCaseOrSubcategoria_NombreSubcategoriaContainingIgnoreCase(
+    String nombre, String subcategoria
+    );
+    
+    List<Producto> findByNombreProductoContainingIgnoreCaseOrSubcategoria_NombreSubcategoriaContainingIgnoreCaseOrSubcategoria_Categoria_NombreCategoriaContainingIgnoreCase(
+            String nombre, String subcategoria, String categoria
+        );
+  
     
 
     @Query("SELECT COUNT(p) FROM Producto p WHERE p.vendedor.idVendedor = :id AND p.estado = 'Disponible'")

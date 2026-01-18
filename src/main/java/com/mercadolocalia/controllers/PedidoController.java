@@ -12,24 +12,10 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
-import com.mercadolocalia.dto.CheckoutRequest;
-import com.mercadolocalia.dto.PedidoCarritoRequest;
-import com.mercadolocalia.dto.PedidoDTO;
-import com.mercadolocalia.dto.PedidoRequest;
-import com.mercadolocalia.dto.PedidoResponse;
-import com.mercadolocalia.entities.Consumidor;
-import com.mercadolocalia.entities.DetallePedido;
-import com.mercadolocalia.entities.EstadoPedido;
-import com.mercadolocalia.entities.EstadoSeguimientoPedido;
-import com.mercadolocalia.entities.Pedido;
-import com.mercadolocalia.entities.PedidoVendedor;
-import com.mercadolocalia.entities.Usuario;
-import com.mercadolocalia.entities.Vendedor;
+import com.mercadolocalia.dto.*;
+import com.mercadolocalia.entities.*;
 import com.mercadolocalia.mappers.PedidoMapper;
-import com.mercadolocalia.repositories.ConsumidorRepository;
-import com.mercadolocalia.repositories.PedidoRepository;
-import com.mercadolocalia.repositories.UsuarioRepository;
-import com.mercadolocalia.repositories.VendedorRepository;
+import com.mercadolocalia.repositories.*;
 import com.mercadolocalia.services.PedidoService;
 
 @RestController
@@ -304,7 +290,7 @@ public class PedidoController {
 			throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No autorizado");
 		}
 
-		if (pedido.getEstadoPedido() == EstadoPedido.PENDIENTE || pedido.getEstadoPedido() == EstadoPedido.PROCESANDO) {
+		if (pedido.getEstadoPedido() == EstadoPedido.CREADO || pedido.getEstadoPedido() == EstadoPedido.PENDIENTE) {
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La factura aún no está disponible");
 		}
 
@@ -369,7 +355,7 @@ public class PedidoController {
 	                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Pedido no encontrado"));
 
 	        // Marcar como COMPLETADO
-	        pedido.setEstadoPedido(EstadoPedido.COMPLETADO);
+	        pedido.setEstadoPedido(EstadoPedido.PENDIENTE);
 	        
 	        // Marcar como ENTREGADO (seguimiento)
 	        pedido.setEstadoSeguimiento(EstadoSeguimientoPedido.ENTREGADO);
