@@ -6,6 +6,7 @@ import java.util.*;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -480,60 +481,105 @@ public class PedidoServiceImpl implements PedidoService {
 		return res;
 	}
 
-	//Multivendedor
-	
+	// ============================================================
+	// 🔥 CHECKOUT MULTI-VENDEDOR (CORREGIDO CON ID COMPRA UNIFICADA)
+	// ============================================================
 	@Override
 	@Transactional
-	public List<Pedido> checkoutMultiVendedor(Integer idConsumidor) {
+	public CheckoutResponseDTO checkoutMultiVendedor(Integer idConsumidor) {
+	    
+	    System.out.println("🔍 INICIANDO CHECKOUT MULTI-VENDEDOR para consumidor: " + idConsumidor);
+
+	    // 1️⃣ Obtener el carrito
 	    Carrito carrito = carritoRepository.findByConsumidorIdConsumidor(idConsumidor)
 	            .orElseThrow(() -> new RuntimeException("Carrito no encontrado"));
+
+	    System.out.println("✅ Carrito encontrado. Items: " + carrito.getItems().size());
 
 	    if (carrito.getItems().isEmpty()) {
 	        throw new RuntimeException("El carrito está vacío");
 	    }
 
+	    // 2️⃣ 🔥 GENERAR ID ÚNICO PARA COMPRA UNIFICADA
+	    String idCompraUnificada = "COMPRA-" + 
+	        System.currentTimeMillis() + "-" + 
+	        UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+	    
+	    System.out.println("🆔 ID Compra Unificada generado: " + idCompraUnificada);
+
+	    // 3️⃣ 🔥 AGRUPAR ITEMS POR VENDEDOR
 	    Map<Vendedor, List<CarritoItem>> itemsPorVendedor = new HashMap<>();
 	    for (CarritoItem item : carrito.getItems()) {
 	        Vendedor vendedor = item.getProducto().getVendedor();
+	        
+	        if (vendedor == null) {
+	            throw new RuntimeException("El producto '" + item.getProducto().getNombreProducto() + 
+	                                     "' no tiene vendedor asignado");
+	        }
+	        
 	        itemsPorVendedor.computeIfAbsent(vendedor, v -> new ArrayList<>()).add(item);
 	    }
 
+	    System.out.println("🏪 Vendedores involucrados: " + itemsPorVendedor.size());
+
 	    List<Pedido> pedidosCreados = new ArrayList<>();
 
+	    // 4️⃣ 🔥 CREAR UN PEDIDO POR CADA VENDEDOR CON MISMO idCompraUnificada
 	    for (Map.Entry<Vendedor, List<CarritoItem>> entry : itemsPorVendedor.entrySet()) {
 	        Vendedor vendedor = entry.getKey();
 	        List<CarritoItem> items = entry.getValue();
 
+	        System.out.println("🛍️ Procesando pedido para vendedor: " + vendedor.getNombreEmpresa() + 
+	                           " (ID: " + vendedor.getIdVendedor() + ") con " + items.size() + " productos");
+
+	        // 5️⃣ Calcular totales SOLO de los productos de este vendedor
+	        double subtotal = 0.0;
+	        for (CarritoItem item : items) {
+	            double precioProducto = item.getProducto().getPrecioProducto();
+	            int cantidad = item.getCantidad();
+	            subtotal += precioProducto * cantidad;
+	        }
+
+	        double iva = subtotal * 0.12;
+	        double total = subtotal + iva;
+
+	        System.out.println("💰 Vendedor: " + vendedor.getNombreEmpresa() + 
+	                           " | Subtotal: " + subtotal + 
+	                           " | IVA: " + iva + 
+	                           " | Total: " + total);
+
+	        // 6️⃣ Crear pedido para este vendedor específico
 	        Pedido pedido = new Pedido();
 	        pedido.setConsumidor(carrito.getConsumidor());
 	        pedido.setVendedor(vendedor);
 	        pedido.setMetodoPago("PENDIENTE");
-	        pedido.setEstadoPedido(EstadoPedido.PENDIENTE);
+	        pedido.setEstadoPedido(EstadoPedido.CREADO);
+	        pedido.setEstadoSeguimiento(EstadoSeguimientoPedido.PEDIDO_REALIZADO);
 	        pedido.setFechaPedido(LocalDateTime.now());
-
-	        double subtotal = 0.0;
-	        for (CarritoItem item : items) {
-	            subtotal += (item.getProducto().getPrecioProducto() * item.getCantidad());
-	        }
-
 	        pedido.setSubtotal(subtotal);
-	        pedido.setIva(subtotal * 0.12);
-	        pedido.setTotal(subtotal + pedido.getIva());
+	        pedido.setIva(iva);
+	        pedido.setTotal(total);
+	        pedido.setPagado(false);
+	        
+	        // 🔥🔥🔥 AQUÍ ESTÁ LA CLAVE: MISMO ID PARA TODOS LOS PEDIDOS
+	        pedido.setIdCompraUnificada(idCompraUnificada);
 
-	        // Guardamos el pedido como siempre
+	        // 7️⃣ Guardar el pedido
 	        Pedido pedidoGuardado = pedidoRepository.save(pedido);
+	        System.out.println("✅ Pedido creado ID: " + pedidoGuardado.getIdPedido() + 
+	                           " para vendedor: " + vendedor.getNombreEmpresa() +
+	                           " | ID Compra: " + idCompraUnificada);
 
-	        // ============================================================
-	        // 🔥 NUEVO: REGISTRAR EN LA TABLA DEL VENDEDOR
-	        // ============================================================
+	        // 8️⃣ 🔥 Registrar en tabla pedido_vendedor
 	        PedidoVendedor pv = new PedidoVendedor();
 	        pv.setPedido(pedidoGuardado);
 	        pv.setVendedor(vendedor);
-	        pv.setEstado(EstadoPedidoVendedor.NUEVO); 
+	        pv.setEstado(EstadoPedidoVendedor.NUEVO);
 	        pv.setFechaActualizacion(LocalDateTime.now());
-	        pedidoVendedorRepo.save(pv); 
-	        // ============================================================
+	        pedidoVendedorRepo.save(pv);
+	        System.out.println("✅ Registro pedido_vendedor creado");
 
+	        // 9️⃣ Crear detalles del pedido SOLO con productos de este vendedor
 	        for (CarritoItem item : items) {
 	            DetallePedido detalle = new DetallePedido();
 	            detalle.setPedido(pedidoGuardado);
@@ -542,13 +588,156 @@ public class PedidoServiceImpl implements PedidoService {
 	            detalle.setPrecioUnitario(item.getProducto().getPrecioProducto());
 	            detalle.setSubtotal(item.getProducto().getPrecioProducto() * item.getCantidad());
 	            detallePedidoRepository.save(detalle);
+	            
+	            System.out.println("  📝 Detalle agregado: " + item.getProducto().getNombreProducto() + 
+	                               " x" + item.getCantidad());
 	        }
+
+	        // 🔟 Actualizar stock de productos
+	        for (CarritoItem item : items) {
+	            Producto producto = item.getProducto();
+	            if (producto.getStockProducto() != null) {
+	                int nuevoStock = producto.getStockProducto() - item.getCantidad();
+	                if (nuevoStock < 0) {
+	                    throw new RuntimeException("Stock insuficiente para: " + producto.getNombreProducto());
+	                }
+	                producto.setStockProducto(nuevoStock);
+	                productoRepository.save(producto);
+	            }
+	        }
+
+	        // 1️⃣1️⃣ Crear notificación para el vendedor
+	        notificacionService.crearNotificacion(
+	            vendedor.getUsuario(),
+	            "📦 Nuevo pedido #" + pedidoGuardado.getIdPedido() + " - Total: $" + total,
+	            "PEDIDO",
+	            pedidoGuardado.getIdPedido()
+	        );
 
 	        pedidosCreados.add(pedidoGuardado);
 	    }
 
+	    // 1️⃣2️⃣ Limpiar TODO el carrito al final
+	    System.out.println("🗑️ Limpiando carrito completo...");
 	    carritoItemRepository.deleteAll(carrito.getItems());
-	    return pedidosCreados;
+	    
+	    // 1️⃣3️⃣ Notificar al consumidor
+	    String mensaje = pedidosCreados.size() == 1 
+	        ? "🛒 Tu pedido #" + pedidosCreados.get(0).getIdPedido() + " fue creado exitosamente"
+	        : "🛒 Se crearon " + pedidosCreados.size() + " pedidos de " + itemsPorVendedor.size() + " vendedores";
+	    
+	    notificacionService.crearNotificacion(
+	        carrito.getConsumidor().getUsuario(),
+	        mensaje,
+	        "PEDIDO",
+	        pedidosCreados.get(0).getIdPedido()
+	    );
+
+	    System.out.println("🎉 Checkout completado: " + pedidosCreados.size() + " pedido(s) creados");
+
+	    // 1️⃣4️⃣ 🔥 Retornar DTO con toda la información
+	    return new CheckoutResponseDTO(idCompraUnificada, pedidosCreados);
+	}
+
+	// ============================================================
+	// 🔥 CHECKOUT LEGACY (para compatibilidad con frontend existente)
+	// ============================================================
+	@Override
+	@Transactional
+	public List<Pedido> checkoutMultiVendedorLegacy(Integer idConsumidor) {
+	    // Simplemente llama al método nuevo y extrae la lista de pedidos
+	    CheckoutResponseDTO respuesta = checkoutMultiVendedor(idConsumidor);
+	    return respuesta.getPedidos();
+	}
+
+	// ============================================================
+	// 🔥 NUEVO: OBTENER COMPRA UNIFICADA
+	// ============================================================
+	@Override
+	public CompraUnificadaDTO obtenerCompraUnificada(String idCompraUnificada, Integer idConsumidor) {
+	    // Validar que el consumidor exista
+	    Consumidor consumidor = consumidorRepository.findById(idConsumidor)
+	        .orElseThrow(() -> new RuntimeException("Consumidor no encontrado"));
+	    
+	    // Obtener pedidos usando el método seguro del repository
+	    List<Pedido> pedidos = pedidoRepository
+	        .findByIdCompraUnificadaAndConsumidor_IdConsumidor(idCompraUnificada, idConsumidor);
+	    
+	    if (pedidos.isEmpty()) {
+	        throw new RuntimeException("Compra no encontrada o no pertenece al consumidor");
+	    }
+	    
+	    // Crear y retornar DTO
+	    CompraUnificadaDTO dto = new CompraUnificadaDTO(idCompraUnificada, pedidos);
+	    
+	    // Agregar información adicional
+	    if (!pedidos.isEmpty()) {
+	        Pedido primerPedido = pedidos.get(0);
+	        dto.setMetodoPago(primerPedido.getMetodoPago());
+	        dto.setFechaCompra(primerPedido.getFechaPedido() != null ? 
+	            primerPedido.getFechaPedido().toString() : "");
+	    }
+	    
+	    return dto;
+	}
+
+	// ============================================================
+	// 🔥 NUEVO: LISTAR COMPRAS UNIFICADAS DEL CONSUMIDOR
+	// ============================================================
+	@Override
+	public List<CompraUnificadaDTO> obtenerComprasUnificadasPorConsumidor(Integer idConsumidor) {
+	    // Obtener todos los pedidos del consumidor
+	    List<Pedido> todosPedidos = pedidoRepository
+	        .findByConsumidor_IdConsumidorOrderByFechaPedidoDesc(idConsumidor);
+	    
+	    if (todosPedidos.isEmpty()) {
+	        return new ArrayList<>();
+	    }
+	    
+	    // Filtrar solo los que tienen idCompraUnificada
+	    Map<String, List<Pedido>> pedidosPorCompra = todosPedidos.stream()
+	        .filter(p -> p.getIdCompraUnificada() != null && !p.getIdCompraUnificada().isEmpty())
+	        .collect(Collectors.groupingBy(Pedido::getIdCompraUnificada));
+	    
+	    if (pedidosPorCompra.isEmpty()) {
+	        return new ArrayList<>();
+	    }
+	    
+	    // Crear DTOs para cada compra unificada
+	    List<CompraUnificadaDTO> compras = new ArrayList<>();
+	    
+	    for (Map.Entry<String, List<Pedido>> entry : pedidosPorCompra.entrySet()) {
+	        // Ordenar pedidos por fecha descendente
+	        List<Pedido> pedidosOrdenados = entry.getValue().stream()
+	            .sorted((p1, p2) -> p2.getFechaPedido().compareTo(p1.getFechaPedido()))
+	            .collect(Collectors.toList());
+	        
+	        CompraUnificadaDTO compraDTO = new CompraUnificadaDTO(entry.getKey(), pedidosOrdenados);
+	        
+	        // Agregar información adicional
+	        if (!pedidosOrdenados.isEmpty()) {
+	            Pedido primerPedido = pedidosOrdenados.get(0);
+	            compraDTO.setMetodoPago(primerPedido.getMetodoPago());
+	            compraDTO.setFechaCompra(primerPedido.getFechaPedido() != null ? 
+	                primerPedido.getFechaPedido().toString() : "");
+	        }
+	        
+	        compras.add(compraDTO);
+	    }
+	    
+	    // Ordenar compras por fecha (más reciente primero)
+	    compras.sort((c1, c2) -> {
+	        if (c1.getPedidos() == null || c1.getPedidos().isEmpty()) return 1;
+	        if (c2.getPedidos() == null || c2.getPedidos().isEmpty()) return -1;
+	        
+	        LocalDateTime fecha1 = c1.getPedidos().get(0).getFechaPedido();
+	        LocalDateTime fecha2 = c2.getPedidos().get(0).getFechaPedido();
+	        
+	        if (fecha1 == null || fecha2 == null) return 0;
+	        return fecha2.compareTo(fecha1);
+	    });
+	    
+	    return compras;
 	}
 
 	// ============================================================
@@ -632,8 +821,9 @@ public class PedidoServiceImpl implements PedidoService {
 	    return pedido;
 	}
 	
-	//
-	
+	// ============================================================
+	// LISTAR PEDIDOS HISTORIAL
+	// ============================================================
 	@Override
 	public List<Pedido> listarPedidosHistorial(Integer idConsumidor) {
 
@@ -651,7 +841,9 @@ public class PedidoServiceImpl implements PedidoService {
 	    return pedidos;
 	}
 
-	
+	// ============================================================
+	// CAMBIAR ESTADO DE SEGUIMIENTO
+	// ============================================================
 	@Override
 	public Pedido cambiarEstadoSeguimiento(Integer idPedido, String nuevoEstadoSeguimiento) {
 
@@ -724,8 +916,9 @@ public class PedidoServiceImpl implements PedidoService {
 	    }
 	}
 	
-	//
-	
+	// ============================================================
+	// LISTAR DETALLES POR VENDEDOR
+	// ============================================================
 	@Override
 	public List<DetallePedido> listarDetallesPorVendedor(Integer idPedido, Integer idVendedor) {
 	    // Buscamos todos los detalles del pedido original
@@ -739,109 +932,9 @@ public class PedidoServiceImpl implements PedidoService {
 	            .toList();
 	}
 	
-	@Override
-	@Transactional
-	public Pedido checkoutUnificado(Integer idConsumidor) {
-	    
-	    System.out.println("🔍 INICIANDO CHECKOUT UNIFICADO para consumidor: " + idConsumidor);
-
-	    // 1️⃣ Obtener el carrito
-	    Carrito carrito = carritoRepository.findByConsumidorIdConsumidor(idConsumidor)
-	            .orElseThrow(() -> new RuntimeException("Carrito no encontrado"));
-
-	    System.out.println("✅ Carrito encontrado. Items: " + carrito.getItems().size());
-
-	    if (carrito.getItems().isEmpty()) {
-	        throw new RuntimeException("El carrito está vacío");
-	    }
-
-	    // 🔥 OBTENER EL PRIMER VENDEDOR DEL CARRITO
-	    CarritoItem primerItem = carrito.getItems().get(0);
-	    System.out.println("🔍 Primer item: " + primerItem.getProducto().getNombreProducto());
-	    
-	    Vendedor primerVendedor = primerItem.getProducto().getVendedor();
-	    
-	    if (primerVendedor == null) {
-	        System.out.println("❌ ERROR: El producto no tiene vendedor asignado");
-	        throw new RuntimeException("Los productos no tienen vendedor asignado");
-	    }
-	    
-	    System.out.println("✅ Vendedor encontrado: " + primerVendedor.getIdVendedor());
-
-	    // 2️⃣ CREAR UN SOLO PEDIDO
-	    Pedido pedido = new Pedido();
-	    pedido.setConsumidor(carrito.getConsumidor());
-	    pedido.setVendedor(primerVendedor);  // ✅ ASIGNAR VENDEDOR
-	    pedido.setMetodoPago("PENDIENTE");
-	    pedido.setEstadoPedido(EstadoPedido.PENDIENTE);
-	    pedido.setFechaPedido(LocalDateTime.now());
-
-	    System.out.println("✅ Pedido creado (sin guardar aún)");
-
-	    // 3️⃣ Calcular el total de TODOS los items
-	    double subtotal = 0.0;
-	    for (CarritoItem item : carrito.getItems()) {
-	        subtotal += (item.getProducto().getPrecioProducto() * item.getCantidad());
-	    }
-
-	    pedido.setSubtotal(subtotal);
-	    pedido.setIva(subtotal * 0.12);
-	    pedido.setTotal(subtotal + pedido.getIva());
-
-	    System.out.println("✅ Totales calculados - Subtotal: " + subtotal + ", Total: " + pedido.getTotal());
-
-	    // 4️⃣ Guardar el pedido único
-	    System.out.println("🔍 Intentando guardar pedido...");
-	    
-	    try {
-	        Pedido pedidoGuardado = pedidoRepository.save(pedido);
-	        System.out.println("✅ Pedido guardado con ID: " + pedidoGuardado.getIdPedido());
-	        
-	        // 5️⃣ Crear detalles y registros en pedido_vendedor
-	        Map<Vendedor, List<CarritoItem>> itemsPorVendedor = new HashMap<>();
-	        for (CarritoItem item : carrito.getItems()) {
-	            Vendedor vendedor = item.getProducto().getVendedor();
-	            itemsPorVendedor.computeIfAbsent(vendedor, v -> new ArrayList<>()).add(item);
-	        }
-
-	        // 6️⃣ Crear detalles del pedido
-	        for (CarritoItem item : carrito.getItems()) {
-	            DetallePedido detalle = new DetallePedido();
-	            detalle.setPedido(pedidoGuardado);
-	            detalle.setProducto(item.getProducto());
-	            detalle.setCantidad(item.getCantidad());
-	            detalle.setPrecioUnitario(item.getProducto().getPrecioProducto());
-	            detalle.setSubtotal(item.getProducto().getPrecioProducto() * item.getCantidad());
-	            detallePedidoRepository.save(detalle);
-	        }
-	        
-	        System.out.println("✅ Detalles del pedido creados");
-
-	        // 7️⃣ CREAR REGISTROS EN PEDIDO_VENDEDOR PARA CADA VENDEDOR
-	        for (Vendedor vendedor : itemsPorVendedor.keySet()) {
-	            PedidoVendedor pv = new PedidoVendedor();
-	            pv.setPedido(pedidoGuardado);
-	            pv.setVendedor(vendedor);
-	            pv.setEstado(EstadoPedidoVendedor.NUEVO);
-	            pv.setFechaActualizacion(LocalDateTime.now());
-	            pedidoVendedorRepo.save(pv);
-	        }
-	        
-	        System.out.println("✅ Registros de pedido_vendedor creados");
-
-	        // 8️⃣ Limpiar el carrito
-	        carritoItemRepository.deleteAll(carrito.getItems());
-	        System.out.println("✅ Carrito limpiado");
-
-	        return pedidoGuardado;
-	        
-	    } catch (Exception e) {
-	        System.out.println("❌ ERROR AL GUARDAR PEDIDO: " + e.getMessage());
-	        e.printStackTrace();
-	        throw e;
-	    }
-	}
-
+	// ============================================================
+	// LISTAR PEDIDOS HISTORIAL (CON CONSUMIDOR)
+	// ============================================================
 	@Override
 	public List<Pedido> listarPedidosHistorial(Consumidor consumidor) {
 	    // Validar que el consumidor exista

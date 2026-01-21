@@ -1,5 +1,6 @@
 package com.mercadolocalia.controllers;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -17,6 +18,7 @@ import com.mercadolocalia.entities.*;
 import com.mercadolocalia.mappers.PedidoMapper;
 import com.mercadolocalia.repositories.*;
 import com.mercadolocalia.services.PedidoService;
+import com.mercadolocalia.services.impl.PedidoServiceImpl;
 
 @RestController
 @RequestMapping("/pedidos")
@@ -190,24 +192,28 @@ public class PedidoController {
 	}
 
 	// ============================================================
-	// 🛒 PROCESAR CHECKOUT UNIFICADO (UN SOLO PEDIDO)
+	// 🛒 CHECKOUT LEGACY (para mantener compatibilidad con frontend existente)
 	// ============================================================
 	@PostMapping("/checkout")
 	@PreAuthorize("hasRole('CONSUMIDOR')")
-	public ResponseEntity<Pedido> checkout(
+	public ResponseEntity<List<Pedido>> checkout(
 	        @RequestBody CheckoutRequest request,
 	        Authentication authentication) {
-	    
-	    System.out.println("🔍 CHECKOUT REQUEST RECIBIDO");
-	    System.out.println("🔍 ID Consumidor: " + request.getIdConsumidor());
-	    System.out.println("🔍 Usuario autenticado: " + authentication.getName());
-	    
+
 	    try {
+	        System.out.println("🔍 ========================================");
+	        System.out.println("🔍 CHECKOUT REQUEST RECIBIDO (LEGACY)");
+	        System.out.println("🔍 ========================================");
+	        System.out.println("🔍 ID Consumidor: " + request.getIdConsumidor());
+	        System.out.println("🔍 Usuario autenticado: " + authentication.getName());
+
+	        // 1️⃣ Validar usuario autenticado
 	        Usuario usuario = usuarioRepository.findByCorreo(authentication.getName())
 	                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Usuario no autenticado"));
 
 	        System.out.println("✅ Usuario encontrado: " + usuario.getCorreo());
 
+	        // 2️⃣ Validar que sea consumidor
 	        Consumidor consumidor = consumidorRepository.findByUsuario(usuario);
 
 	        if (consumidor == null) {
@@ -217,25 +223,271 @@ public class PedidoController {
 
 	        System.out.println("✅ Consumidor encontrado: " + consumidor.getIdConsumidor());
 
+	        // 3️⃣ Validar que coincida el ID
 	        if (!consumidor.getIdConsumidor().equals(request.getIdConsumidor())) {
 	            System.out.println("❌ ID de consumidor no coincide");
 	            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No puedes crear pedidos para otro usuario");
 	        }
 
-	        // 🔥 Llamar al nuevo método
-	        System.out.println("🔍 Llamando a checkoutUnificado...");
-	        Pedido pedidoUnico = pedidoService.checkoutUnificado(request.getIdConsumidor());
-
-	        System.out.println("✅ Pedido creado exitosamente: " + pedidoUnico.getIdPedido());
-
-	        return ResponseEntity.ok(pedidoUnico);
+	        // 4️⃣ 🔥 USAR MÉTODO LEGACY QUE DEVUELVE List<Pedido>
+	        System.out.println("🔍 Llamando a checkoutMultiVendedorLegacy...");
 	        
-	    } catch (Exception e) {
-	        System.out.println("❌ ERROR EN CHECKOUT CONTROLLER: " + e.getMessage());
-	        e.printStackTrace();
+	        // NECESITAS CASTEAR A PedidoServiceImpl O CAMBIAR TU INTERFACE
+	        List<Pedido> pedidosCreados;
+	        
+	        if (pedidoService instanceof PedidoServiceImpl) {
+	            // Si puedes hacer casting a la implementación
+	            PedidoServiceImpl pedidoServiceImpl = (PedidoServiceImpl) pedidoService;
+	            pedidosCreados = pedidoServiceImpl.checkoutMultiVendedorLegacy(request.getIdConsumidor());
+	        } else {
+	            // Alternativa: llamar al método nuevo y extraer los pedidos
+	            CheckoutResponseDTO respuesta = pedidoService.checkoutMultiVendedor(request.getIdConsumidor());
+	            pedidosCreados = respuesta.getPedidos();
+	        }
+
+	        System.out.println("✅ ========================================");
+	        System.out.println("✅ CHECKOUT EXITOSO");
+	        System.out.println("✅ Se crearon " + pedidosCreados.size() + " pedido(s)");
+	        System.out.println("✅ ========================================");
+	        
+	        // 5️⃣ Imprimir IDs de los pedidos creados y ID de compra unificada
+	        if (!pedidosCreados.isEmpty()) {
+	            System.out.println("🆔 ID Compra Unificada: " + pedidosCreados.get(0).getIdCompraUnificada());
+	        }
+	        
+	        for (int i = 0; i < pedidosCreados.size(); i++) {
+	            Pedido p = pedidosCreados.get(i);
+	            System.out.println("  📦 Pedido " + (i + 1) + ": #" + p.getIdPedido() + 
+	                             " - Vendedor: " + p.getVendedor().getNombreEmpresa() +
+	                             " - Total: $" + p.getTotal());
+	        }
+
+	        return ResponseEntity.ok(pedidosCreados);
+
+	    } catch (ResponseStatusException e) {
+	        System.out.println("❌ ERROR CONTROLADO: " + e.getMessage());
 	        throw e;
+	    } catch (Exception e) {
+	        System.out.println("❌ ========================================");
+	        System.out.println("❌ ERROR EN CHECKOUT CONTROLLER");
+	        System.out.println("❌ ========================================");
+	        System.out.println("❌ Mensaje: " + e.getMessage());
+	        e.printStackTrace();
+	        throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, 
+	                "Error al procesar checkout: " + e.getMessage());
 	    }
 	}
+
+	// ============================================================
+	// 🛒 CHECKOUT COMPLETO (devuelve CheckoutResponseDTO)
+	// ============================================================
+	@PostMapping("/checkout-completo")
+	@PreAuthorize("hasRole('CONSUMIDOR')")
+	public ResponseEntity<?> checkoutCompleto(
+	        @RequestBody CheckoutRequest request,
+	        Authentication authentication) {
+
+	    try {
+	        System.out.println("🔍 ========================================");
+	        System.out.println("🔍 CHECKOUT COMPLETO SOLICITADO");
+	        System.out.println("🔍 ========================================");
+	        System.out.println("🔍 ID Consumidor: " + request.getIdConsumidor());
+	        System.out.println("🔍 Usuario autenticado: " + authentication.getName());
+
+	        // 1️⃣ Validar usuario autenticado
+	        Usuario usuario = usuarioRepository.findByCorreo(authentication.getName())
+	                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Usuario no autenticado"));
+
+	        System.out.println("✅ Usuario encontrado: " + usuario.getCorreo());
+
+	        // 2️⃣ Validar que sea consumidor
+	        Consumidor consumidor = consumidorRepository.findByUsuario(usuario);
+
+	        if (consumidor == null) {
+	            System.out.println("❌ Usuario no es consumidor");
+	            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "El usuario no está registrado como consumidor");
+	        }
+
+	        System.out.println("✅ Consumidor encontrado: " + consumidor.getIdConsumidor());
+
+	        // 3️⃣ Validar que coincida el ID
+	        if (!consumidor.getIdConsumidor().equals(request.getIdConsumidor())) {
+	            System.out.println("❌ ID de consumidor no coincide");
+	            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No puedes crear pedidos para otro usuario");
+	        }
+
+	        // 4️⃣ 🔥 LLAMAR AL MÉTODO NUEVO (devuelve CheckoutResponseDTO)
+	        System.out.println("🔍 Llamando a checkoutMultiVendedor (completo)...");
+	        CheckoutResponseDTO respuesta = pedidoService.checkoutMultiVendedor(request.getIdConsumidor());
+
+	        System.out.println("✅ ========================================");
+	        System.out.println("✅ CHECKOUT COMPLETO EXITOSO");
+	        System.out.println("✅ ========================================");
+	        System.out.println("✅ ID Compra Unificada: " + respuesta.getIdCompraUnificada());
+	        System.out.println("✅ Pedidos creados: " + respuesta.getCantidadPedidos());
+	        System.out.println("✅ Vendedores: " + respuesta.getCantidadVendedores());
+	        System.out.println("✅ Subtotal general: $" + respuesta.getSubtotalGeneral());
+	        System.out.println("✅ IVA general: $" + respuesta.getIvaGeneral());
+	        System.out.println("✅ Total general: $" + respuesta.getTotalGeneral());
+
+	        return ResponseEntity.ok(respuesta);
+
+	    } catch (ResponseStatusException e) {
+	        System.out.println("❌ ERROR CONTROLADO: " + e.getReason());
+	        throw e;
+	    } catch (Exception e) {
+	        System.out.println("❌ ========================================");
+	        System.out.println("❌ ERROR EN CHECKOUT COMPLETO");
+	        System.out.println("❌ ========================================");
+	        System.out.println("❌ Mensaje: " + e.getMessage());
+	        e.printStackTrace();
+	        throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, 
+	                                        "Error al procesar checkout: " + e.getMessage());
+	    }
+	}
+
+	// ============================================================
+	// 🛍️ OBTENER COMPRA UNIFICADA POR ID (MEJORADO)
+	// ============================================================
+	@GetMapping("/compra-unificada/{idCompraUnificada}")
+	@PreAuthorize("hasRole('CONSUMIDOR')")
+	public ResponseEntity<?> obtenerCompraUnificada(
+	        @PathVariable String idCompraUnificada,
+	        Authentication authentication) {
+	    
+	    try {
+	        System.out.println("🔍 ========================================");
+	        System.out.println("🔍 SOLICITUD COMPRA UNIFICADA");
+	        System.out.println("🔍 ========================================");
+	        System.out.println("🔍 ID Compra Unificada: " + idCompraUnificada);
+	        
+	        // 1️⃣ Validar usuario autenticado
+	        Usuario usuario = usuarioRepository.findByCorreo(authentication.getName())
+	                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Usuario no autenticado"));
+
+	        System.out.println("✅ Usuario encontrado: " + usuario.getCorreo());
+
+	        // 2️⃣ Validar que sea consumidor
+	        Consumidor consumidor = consumidorRepository.findByUsuario(usuario);
+	        if (consumidor == null) {
+	            System.out.println("❌ Usuario no es consumidor");
+	            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "El usuario no está registrado como consumidor");
+	        }
+
+	        System.out.println("✅ Consumidor encontrado: " + consumidor.getIdConsumidor());
+
+	        // 3️⃣ 🔥 OBTENER LA COMPRA UNIFICADA usando el servicio
+	        System.out.println("🔍 Buscando compra unificada: " + idCompraUnificada);
+	        CompraUnificadaDTO compra = pedidoService.obtenerCompraUnificada(idCompraUnificada, consumidor.getIdConsumidor());
+	        
+	        System.out.println("✅ Pedidos encontrados: " + compra.getCantidadPedidos());
+	        
+	        // 4️⃣ Validar que se encontró la compra
+	        if (compra.getPedidos() == null || compra.getPedidos().isEmpty()) {
+	            System.out.println("❌ No se encontraron pedidos para esta compra unificada");
+	            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+	                .body(Map.of(
+	                    "error", "Compra no encontrada",
+	                    "idCompraUnificada", idCompraUnificada,
+	                    "mensaje", "No tienes acceso a esta compra o no existe"
+	                ));
+	        }
+	        
+	        System.out.println("✅ ========================================");
+	        System.out.println("✅ COMPRA UNIFICADA ENCONTRADA");
+	        System.out.println("✅ ========================================");
+	        System.out.println("✅ ID Compra: " + compra.getIdCompraUnificada());
+	        System.out.println("✅ Total pedidos: " + compra.getCantidadPedidos());
+	        System.out.println("✅ Vendedores: " + compra.getCantidadVendedores());
+	        System.out.println("✅ Total general: $" + compra.getTotalGeneral());
+	        System.out.println("✅ ========================================");
+	        
+	        return ResponseEntity.ok(compra);
+	        
+	    } catch (ResponseStatusException e) {
+	        System.out.println("❌ ERROR CONTROLADO: " + e.getReason());
+	        throw e;
+	    } catch (Exception e) {
+	        System.out.println("❌ ========================================");
+	        System.out.println("❌ ERROR EN COMPRA UNIFICADA");
+	        System.out.println("❌ ========================================");
+	        System.out.println("❌ Mensaje: " + e.getMessage());
+	        e.printStackTrace();
+	        
+	        Map<String, Object> errorResponse = new HashMap<>();
+	        errorResponse.put("error", "Error al obtener la compra unificada");
+	        errorResponse.put("detalle", e.getMessage());
+	        errorResponse.put("idCompraUnificada", idCompraUnificada);
+	        
+	        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+	    }
+	}
+
+	// ============================================================
+	// 📋 LISTAR COMPRAS UNIFICADAS DEL CONSUMIDOR
+	// ============================================================
+	@GetMapping("/mis-compras-unificadas")
+	@PreAuthorize("hasRole('CONSUMIDOR')")
+	public ResponseEntity<?> obtenerMisComprasUnificadas(Authentication authentication) {
+	    
+	    try {
+	        System.out.println("🔍 ========================================");
+	        System.out.println("🔍 SOLICITANDO COMPRAS UNIFICADAS DEL USUARIO");
+	        System.out.println("🔍 ========================================");
+	        
+	        // 1️⃣ Validar usuario autenticado
+	        Usuario usuario = usuarioRepository.findByCorreo(authentication.getName())
+	                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Usuario no autenticado"));
+
+	        System.out.println("✅ Usuario encontrado: " + usuario.getCorreo());
+
+	        // 2️⃣ Validar que sea consumidor
+	        Consumidor consumidor = consumidorRepository.findByUsuario(usuario);
+	        if (consumidor == null) {
+	            System.out.println("❌ Usuario no es consumidor");
+	            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "El usuario no está registrado como consumidor");
+	        }
+
+	        System.out.println("✅ Consumidor encontrado: " + consumidor.getIdConsumidor());
+
+	        // 3️⃣ 🔥 OBTENER LAS COMPRAS UNIFICADAS
+	        System.out.println("🔍 Buscando compras unificadas del consumidor...");
+	        List<CompraUnificadaDTO> compras = pedidoService.obtenerComprasUnificadasPorConsumidor(consumidor.getIdConsumidor());
+	        
+	        System.out.println("✅ Compras unificadas encontradas: " + compras.size());
+	        
+	        if (compras.isEmpty()) {
+	            System.out.println("ℹ️ El consumidor no tiene compras unificadas");
+	            return ResponseEntity.ok(List.of());
+	        }
+	        
+	        // 4️⃣ Mostrar resumen
+	        for (int i = 0; i < compras.size(); i++) {
+	            CompraUnificadaDTO compra = compras.get(i);
+	            System.out.println("  🛍️ Compra " + (i + 1) + ": " + compra.getIdCompraUnificada() + 
+	                             " - " + compra.getCantidadPedidos() + " pedidos - $" + compra.getTotalGeneral());
+	        }
+	        
+	        return ResponseEntity.ok(compras);
+	        
+	    } catch (ResponseStatusException e) {
+	        System.out.println("❌ ERROR CONTROLADO: " + e.getReason());
+	        throw e;
+	    } catch (Exception e) {
+	        System.out.println("❌ ========================================");
+	        System.out.println("❌ ERROR OBTENIENDO COMPRAS UNIFICADAS");
+	        System.out.println("❌ ========================================");
+	        System.out.println("❌ Mensaje: " + e.getMessage());
+	        e.printStackTrace();
+	        
+	        Map<String, Object> errorResponse = new HashMap<>();
+	        errorResponse.put("error", "Error al obtener las compras unificadas");
+	        errorResponse.put("detalle", e.getMessage());
+	        
+	        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+	    }
+	}
+
 	// ============================================================
 	// ❌ CANCELAR PEDIDO
 	// ============================================================
@@ -256,22 +508,49 @@ public class PedidoController {
 	}
 
 	// ============================================================
-	// 📦 MIS PEDIDOS (HISTORIAL CONSUMIDOR)
+	// 📦 MIS PEDIDOS (HISTORIAL CONSUMIDOR) - INCLUYE COMPRAS UNIFICADAS
 	// ============================================================
 	@GetMapping("/mis-pedidos")
 	@PreAuthorize("hasRole('CONSUMIDOR')")
-	public List<PedidoResponse> misPedidos(Authentication authentication) {
-		Usuario usuario = usuarioRepository.findByCorreo(authentication.getName())
-				.orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Usuario no autenticado"));
+	public ResponseEntity<?> misPedidos(Authentication authentication) {
+	    try {
+	        System.out.println("🔍 ========================================");
+	        System.out.println("🔍 SOLICITANDO HISTORIAL DE PEDIDOS");
+	        System.out.println("🔍 ========================================");
+	        
+	        Usuario usuario = usuarioRepository.findByCorreo(authentication.getName())
+	                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Usuario no autenticado"));
 
-		Consumidor consumidor = consumidorRepository.findByUsuario(usuario);
+	        Consumidor consumidor = consumidorRepository.findByUsuario(usuario);
 
-		if (consumidor == null) {
-			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Consumidor no encontrado");
-		}
+	        if (consumidor == null) {
+	            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Consumidor no encontrado");
+	        }
 
-		return pedidoService.listarPedidosHistorial(consumidor.getIdConsumidor()).stream().map(PedidoMapper::toResponse)
-				.toList();
+	        System.out.println("✅ Consumidor encontrado: " + consumidor.getIdConsumidor());
+
+	        // 🔥 Obtener tanto pedidos individuales como compras unificadas
+	        List<Pedido> pedidosIndividuales = pedidoService.listarPedidosHistorial(consumidor.getIdConsumidor());
+	        List<CompraUnificadaDTO> comprasUnificadas = pedidoService.obtenerComprasUnificadasPorConsumidor(consumidor.getIdConsumidor());
+	        
+	        System.out.println("✅ Pedidos individuales: " + pedidosIndividuales.size());
+	        System.out.println("✅ Compras unificadas: " + comprasUnificadas.size());
+
+	        // Crear respuesta combinada
+	        Map<String, Object> respuesta = new HashMap<>();
+	        respuesta.put("pedidosIndividuales", pedidosIndividuales.stream().map(PedidoMapper::toResponse).toList());
+	        respuesta.put("comprasUnificadas", comprasUnificadas);
+	        respuesta.put("totalPedidos", pedidosIndividuales.size());
+	        respuesta.put("totalComprasUnificadas", comprasUnificadas.size());
+	        
+	        return ResponseEntity.ok(respuesta);
+	        
+	    } catch (Exception e) {
+	        System.out.println("❌ ERROR OBTENIENDO HISTORIAL: " + e.getMessage());
+	        e.printStackTrace();
+	        throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, 
+	                "Error al obtener el historial de pedidos: " + e.getMessage());
+	    }
 	}
 
 	// ============================================================
@@ -342,7 +621,9 @@ public class PedidoController {
 		return ResponseEntity.ok(detalles);
 	}
 
-	
+	// ============================================================
+	// ✅ MARCAR PEDIDO COMO ENTREGADO
+	// ============================================================
 	@PutMapping("/{idPedido}/marcar-entregado")
 	@PreAuthorize("hasAnyRole('VENDEDOR', 'REPARTIDOR')")
 	public ResponseEntity<?> marcarComoEntregado(
@@ -355,7 +636,7 @@ public class PedidoController {
 	                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Pedido no encontrado"));
 
 	        // Marcar como COMPLETADO
-	        pedido.setEstadoPedido(EstadoPedido.PENDIENTE);
+	        pedido.setEstadoPedido(EstadoPedido.COMPLETADO);
 	        
 	        // Marcar como ENTREGADO (seguimiento)
 	        pedido.setEstadoSeguimiento(EstadoSeguimientoPedido.ENTREGADO);
@@ -370,11 +651,73 @@ public class PedidoController {
 
 	        return ResponseEntity.ok(Map.of(
 	            "mensaje", "Pedido marcado como entregado",
-	            "pedido", pedido
+	            "pedido", pedido,
+	            "idCompraUnificada", pedido.getIdCompraUnificada()
 	        ));
 	        
 	    } catch (Exception e) {
 	        return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+	    }
+	}
+
+	// ============================================================
+	// 🔥 NUEVO: OBTENER TODOS LOS PEDIDOS DE UNA COMPRA UNIFICADA (PARA VENDEDORES)
+	// ============================================================
+	@GetMapping("/vendedor/compra/{idCompraUnificada}")
+	@PreAuthorize("hasRole('VENDEDOR')")
+	public ResponseEntity<?> obtenerPedidosDeCompraParaVendedor(
+	        @PathVariable String idCompraUnificada,
+	        Authentication authentication) {
+	    
+	    try {
+	        System.out.println("🔍 ========================================");
+	        System.out.println("🔍 VENDEDOR SOLICITANDO PEDIDOS DE COMPRA");
+	        System.out.println("🔍 ========================================");
+	        System.out.println("🔍 ID Compra Unificada: " + idCompraUnificada);
+	        
+	        // 1️⃣ Validar usuario autenticado
+	        Usuario usuario = usuarioRepository.findByCorreo(authentication.getName())
+	                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Usuario no autenticado"));
+
+	        // 2️⃣ Validar que sea vendedor
+	        Vendedor vendedor = vendedorRepository.findByUsuario(usuario)
+	                .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "Usuario no es vendedor"));
+
+	        System.out.println("✅ Vendedor encontrado: " + vendedor.getNombreEmpresa());
+
+	        // 3️⃣ Obtener pedidos de esta compra unificada para este vendedor específico
+	        List<Pedido> pedidos = pedidoRepository.findByIdCompraUnificada(idCompraUnificada);
+	        
+	        // Filtrar solo los pedidos que pertenecen a este vendedor
+	        List<Pedido> pedidosDelVendedor = pedidos.stream()
+	                .filter(p -> p.getVendedor() != null && 
+	                           p.getVendedor().getIdVendedor().equals(vendedor.getIdVendedor()))
+	                .toList();
+	        
+	        if (pedidosDelVendedor.isEmpty()) {
+	            System.out.println("❌ No se encontraron pedidos para este vendedor en esta compra");
+	            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+	                    .body(Map.of("error", "No tienes pedidos en esta compra unificada"));
+	        }
+	        
+	        System.out.println("✅ Pedidos encontrados para el vendedor: " + pedidosDelVendedor.size());
+	        
+	        // 4️⃣ Preparar respuesta
+	        Map<String, Object> respuesta = new HashMap<>();
+	        respuesta.put("idCompraUnificada", idCompraUnificada);
+	        respuesta.put("pedidos", pedidosDelVendedor);
+	        respuesta.put("totalVendedor", pedidosDelVendedor.stream()
+	                .mapToDouble(p -> p.getTotal() != null ? p.getTotal() : 0.0)
+	                .sum());
+	        respuesta.put("cantidadPedidos", pedidosDelVendedor.size());
+	        
+	        return ResponseEntity.ok(respuesta);
+	        
+	    } catch (Exception e) {
+	        System.out.println("❌ ERROR: " + e.getMessage());
+	        e.printStackTrace();
+	        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+	                .body(Map.of("error", "Error al obtener pedidos de la compra: " + e.getMessage()));
 	    }
 	}
 }

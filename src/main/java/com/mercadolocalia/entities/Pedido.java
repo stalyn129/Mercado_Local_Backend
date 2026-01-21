@@ -5,7 +5,6 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import com.mercadolocalia.entities.EstadoPedido;
 
 @Entity
 @Table(name = "pedidos")
@@ -26,7 +25,10 @@ public class Pedido {
     @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})  // ✅
     private Vendedor vendedor;
     
-    @OneToMany(
+    @Column(name = "id_compra_unificada")
+    private String idCompraUnificada;
+
+	@OneToMany(
         mappedBy = "pedido", 
         cascade = CascadeType.ALL, 
         orphanRemoval = true, 
@@ -178,4 +180,12 @@ public class Pedido {
     public void setPagado(Boolean pagado) {
         this.pagado = pagado;
     }
+    
+    public String getIdCompraUnificada() {
+		return idCompraUnificada;
+	}
+
+	public void setIdCompraUnificada(String idCompraUnificada) {
+		this.idCompraUnificada = idCompraUnificada;
+	}
 }

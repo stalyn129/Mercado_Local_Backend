@@ -3,13 +3,12 @@ package com.mercadolocalia.services;
 import com.mercadolocalia.dto.*;
 import com.mercadolocalia.entities.*;
 import org.springframework.web.multipart.MultipartFile;
-
 import java.util.List;
 import java.util.Map;
 
 public interface PedidoService {
     
-    // Métodos básicos
+    // Métodos básicos (existentes)
     Pedido crearPedido(PedidoRequest request);
     Pedido obtenerPedidoPorId(Integer id);
     List<Pedido> listarPedidosPorConsumidor(Integer idConsumidor);
@@ -28,8 +27,18 @@ public interface PedidoService {
     // Carrito y checkout
     Pedido comprarAhora(PedidoRequest request);
     Pedido crearPedidoDesdeCarrito(PedidoCarritoRequest request);
-    List<Pedido> checkoutMultiVendedor(Integer idConsumidor);
-    Pedido checkoutUnificado(Integer idConsumidor);
+    
+    // 🔥 MODIFICADO: Checkout devuelve DTO en lugar de List<Pedido>
+    CheckoutResponseDTO checkoutMultiVendedor(Integer idConsumidor);
+    
+    // 🔥 NUEVO: Método para compatibilidad con frontend existente
+    List<Pedido> checkoutMultiVendedorLegacy(Integer idConsumidor);
+    
+    // 🔥 NUEVO: Obtener compra unificada
+    CompraUnificadaDTO obtenerCompraUnificada(String idCompraUnificada, Integer idConsumidor);
+    
+    // 🔥 NUEVO: Listar compras unificadas del consumidor
+    List<CompraUnificadaDTO> obtenerComprasUnificadasPorConsumidor(Integer idConsumidor);
     
     // Cancelación
     Pedido cancelarPedido(Integer idPedido);
