@@ -18,6 +18,7 @@ public interface PedidoService {
     // Cambios de estado
     Pedido cambiarEstado(Integer idPedido, String estado);
     Pedido cambiarEstadoSeguimiento(Integer idPedido, String estado);
+    Pedido cambiarEstadoPedidoVendedor(Integer idPedido, String nuevoEstado);
     
     // Pago
     Pedido finalizarPedido(Integer idPedido, String metodoPago);

@@ -17,24 +17,24 @@ public class Pedido {
     
     @ManyToOne
     @JoinColumn(name = "id_consumidor", nullable = false)
-    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})  // ✅
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Consumidor consumidor;
     
-    @ManyToOne(fetch = FetchType.LAZY)  // ✅ Agregar LAZY
-    @JoinColumn(name = "id_vendedor", nullable = true)  // ✅ Cambiar a nullable = true
-    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})  // ✅
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_vendedor", nullable = true)
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Vendedor vendedor;
     
     @Column(name = "id_compra_unificada")
     private String idCompraUnificada;
 
-	@OneToMany(
+    @OneToMany(
         mappedBy = "pedido", 
         cascade = CascadeType.ALL, 
         orphanRemoval = true, 
         fetch = FetchType.LAZY
     )
-    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})  // ✅
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private List<DetallePedido> detalles = new ArrayList<>();
     
     @Column(name = "fecha_pedido")
@@ -43,6 +43,11 @@ public class Pedido {
     @Enumerated(EnumType.STRING)
     @Column(name = "estado_pedido")
     private EstadoPedido estadoPedido;
+    
+    // 🔥 AGREGAR ESTE CAMPO (SOLO ESTO ES NECESARIO)
+    @Enumerated(EnumType.STRING)
+    @Column(name = "estado_pedido_vendedor")
+    private EstadoPedidoVendedor estadoPedidoVendedor;
     
     @Enumerated(EnumType.STRING)
     private EstadoSeguimientoPedido estadoSeguimiento;
@@ -68,7 +73,16 @@ public class Pedido {
     @Column(name = "pagado")
     private Boolean pagado = false;
 
-    // Getters y Setters
+    // 🔥 AGREGAR ESTOS DOS MÉTODOS (SOLO ESTO ES NECESARIO)
+    public EstadoPedidoVendedor getEstadoPedidoVendedor() {
+        return estadoPedidoVendedor;
+    }
+    
+    public void setEstadoPedidoVendedor(EstadoPedidoVendedor estadoPedidoVendedor) {
+        this.estadoPedidoVendedor = estadoPedidoVendedor;
+    }
+    
+    // El resto de los getters y setters se mantienen igual...
     
     public Integer getIdPedido() {
         return idPedido;
@@ -173,6 +187,7 @@ public class Pedido {
     public void setDatosTarjeta(String datosTarjeta) {
         this.datosTarjeta = datosTarjeta;
     }
+    
     public Boolean getPagado() {
         return pagado;
     }
@@ -182,10 +197,10 @@ public class Pedido {
     }
     
     public String getIdCompraUnificada() {
-		return idCompraUnificada;
-	}
+        return idCompraUnificada;
+    }
 
-	public void setIdCompraUnificada(String idCompraUnificada) {
-		this.idCompraUnificada = idCompraUnificada;
-	}
+    public void setIdCompraUnificada(String idCompraUnificada) {
+        this.idCompraUnificada = idCompraUnificada;
+    }
 }

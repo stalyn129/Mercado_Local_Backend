@@ -985,4 +985,30 @@ public class PedidoServiceImpl implements PedidoService {
 	    return pedidosFiltrados;
 	}
 
+	@Override
+	public Pedido cambiarEstadoPedidoVendedor(Integer idPedido, String nuevoEstado) {
+	    Pedido pedido = pedidoRepository.findById(idPedido)
+	            .orElseThrow(() -> new RuntimeException("Pedido no encontrado"));
+	    
+	    // Convertir String a Enum
+	    EstadoPedidoVendedor estado = EstadoPedidoVendedor.valueOf(nuevoEstado);
+	    
+	    // Validar transición
+	    // (Aquí puedes agregar lógica de validación de transiciones)
+	    
+	    pedido.setEstadoPedidoVendedor(estado);
+	    
+	    // Si se marca como ENTREGADO, actualizar estado general
+	    if (estado == EstadoPedidoVendedor.ENTREGADO) {
+	        pedido.setEstadoPedido(EstadoPedido.COMPLETADO);
+	        pedido.setEstadoSeguimiento(EstadoSeguimientoPedido.ENTREGADO);
+	    }
+	    
+	    // Si se marca como CANCELADO, actualizar estado general
+	    if (estado == EstadoPedidoVendedor.CANCELADO) {
+	        pedido.setEstadoPedido(EstadoPedido.CANCELADO);
+	    }
+	    
+	    return pedidoRepository.save(pedido);
+	}
 }
