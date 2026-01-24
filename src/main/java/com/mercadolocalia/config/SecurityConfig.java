@@ -54,6 +54,19 @@ public class SecurityConfig {
                 .requestMatchers("/auth/**").permitAll()
                 .requestMatchers("/uploads/**").permitAll()
 
+                .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                .requestMatchers("/admin/**").hasRole("ADMIN")
+                .requestMatchers("/api/admin/**").hasAnyRole("ADMIN", "VENDEDOR")
+                .requestMatchers("/admin/**").hasAnyRole("ADMIN", "VENDEDOR")
+                
+                .requestMatchers("/reportes/**").permitAll() 
+
+             // 🔥 NUEVO: PERMITE /api/productos PARA GET (admin dashboard)
+                .requestMatchers(HttpMethod.GET, "/api/productos").hasRole("ADMIN")
+                
+                // 🔥 NUEVO: PERMITE /productos PARA GET (admin dashboard)
+                .requestMatchers(HttpMethod.GET, "/productos").hasAnyRole("ADMIN", "VENDEDOR", "CONSUMIDOR")
+                
                 // Productos públicos (solo lectura)
                 .requestMatchers(HttpMethod.GET, "/productos/**").permitAll()
                 

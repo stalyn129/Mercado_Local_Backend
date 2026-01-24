@@ -1,5 +1,7 @@
 package com.mercadolocalia.repositories;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -93,4 +95,14 @@ public interface ProductoRepository extends JpaRepository<Producto, Integer> {
     	        @Param("idVendedor") Integer idVendedor
     	);
 
+    // ============================================================
+    // 🔥 CORRECCIÓN: Usa fechaPublicacion (LocalDateTime) no fechaCreacion
+    // ============================================================
+    
+    // Método 1: Usando LocalDateTime (recomendado si tienes fechaPublicacion)
+    Long countByFechaPublicacionBetween(LocalDateTime inicio, LocalDateTime fin);
+    
+    // Método 2: Si necesitas LocalDate, crea un método custom
+    @Query("SELECT COUNT(p) FROM Producto p WHERE DATE(p.fechaPublicacion) BETWEEN :inicio AND :fin")
+    Long countByFechaPublicacionDateBetween(@Param("inicio") LocalDate inicio, @Param("fin") LocalDate fin);
 }

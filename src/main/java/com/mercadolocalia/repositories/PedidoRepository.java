@@ -1,5 +1,6 @@
 package com.mercadolocalia.repositories;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
@@ -156,4 +157,9 @@ public interface PedidoRepository extends JpaRepository<Pedido, Integer> {
         @Param("estado") EstadoPedido estado,
         @Param("idCompraUnificada") String idCompraUnificada
     );
+    
+ // NUEVOS MÉTODOS:
+    Long countByFechaPedido(LocalDate fecha);
+    
+    Long countByFechaPedidoBetween(LocalDate inicio, LocalDate fin);
 }
