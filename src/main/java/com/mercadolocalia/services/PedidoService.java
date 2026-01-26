@@ -8,54 +8,82 @@ import java.util.Map;
 
 public interface PedidoService {
     
-    // Métodos básicos (existentes)
+    // ============================================================
+    // 🔥 MÉTODOS CHECKOUT (ACTUALIZADOS)
+    // ============================================================
+    
+    // 🔥 VERSIÓN 1: Sin ID (genera automático)
+    CheckoutResponseDTO checkoutMultiVendedor(Integer idConsumidor);
+    
+    // 🔥 VERSIÓN 2: Con ID proporcionado
+    CheckoutResponseDTO checkoutMultiVendedor(Integer idConsumidor, String idCompraUnificada);
+    
+    // 🔥 VERSIÓN 3: Método principal con ID
+    CheckoutResponseDTO checkoutMultiVendedorConIdCompra(Integer idConsumidor, String idCompraUnificada);
+    
+    // 🔥 VERSIÓN 4: Para compatibilidad (devuelve List<Pedido>)
+    List<Pedido> checkoutMultiVendedorLegacy(Integer idConsumidor);
+    
+    // ============================================================
+    // 🔥 COMPRAS UNIFICADAS
+    // ============================================================
+    CompraUnificadaDTO obtenerCompraUnificada(String idCompraUnificada, Integer idConsumidor);
+    List<CompraUnificadaDTO> obtenerComprasUnificadasPorConsumidor(Integer idConsumidor);
+    
+    // ============================================================
+    // MÉTODOS BÁSICOS (EXISTENTES)
+    // ============================================================
     Pedido crearPedido(PedidoRequest request);
     Pedido obtenerPedidoPorId(Integer id);
     List<Pedido> listarPedidosPorConsumidor(Integer idConsumidor);
     List<Pedido> listarPedidosPorVendedor(Integer idVendedor);
     List<DetallePedido> listarDetalles(Integer idPedido);
     
-    // Cambios de estado
+    // ============================================================
+    // CAMBIOS DE ESTADO
+    // ============================================================
     Pedido cambiarEstado(Integer idPedido, String estado);
     Pedido cambiarEstadoSeguimiento(Integer idPedido, String estado);
     Pedido cambiarEstadoPedidoVendedor(Integer idPedido, String nuevoEstado);
     
-    // Pago
+    // ============================================================
+    // PAGO
+    // ============================================================
     Pedido finalizarPedido(Integer idPedido, String metodoPago);
     Pedido finalizarPedido(Integer idPedido, String metodoPago, MultipartFile comprobante,
                           String numTarjeta, String fechaTarjeta, String cvv, String titular);
     
-    // Carrito y checkout
+    // ============================================================
+    // CARRITO Y COMPRA
+    // ============================================================
     Pedido comprarAhora(PedidoRequest request);
     Pedido crearPedidoDesdeCarrito(PedidoCarritoRequest request);
     
-    // 🔥 MODIFICADO: Checkout devuelve DTO en lugar de List<Pedido>
-    CheckoutResponseDTO checkoutMultiVendedor(Integer idConsumidor);
-    
-    // 🔥 NUEVO: Método para compatibilidad con frontend existente
-    List<Pedido> checkoutMultiVendedorLegacy(Integer idConsumidor);
-    
-    // 🔥 NUEVO: Obtener compra unificada
-    CompraUnificadaDTO obtenerCompraUnificada(String idCompraUnificada, Integer idConsumidor);
-    
-    // 🔥 NUEVO: Listar compras unificadas del consumidor
-    List<CompraUnificadaDTO> obtenerComprasUnificadasPorConsumidor(Integer idConsumidor);
-    
-    // Cancelación
+    // ============================================================
+    // CANCELACIÓN
+    // ============================================================
     Pedido cancelarPedido(Integer idPedido);
     
-    // Historial
+    // ============================================================
+    // HISTORIAL
+    // ============================================================
     List<Pedido> listarPedidosHistorial(Integer idConsumidor);
     List<Pedido> listarPedidosHistorial(Consumidor consumidor);
     
-    // Estadísticas y reportes
+    // ============================================================
+    // ESTADÍSTICAS Y REPORTES
+    // ============================================================
     Map<String, Object> obtenerEstadisticasVendedor(Integer idVendedor);
     List<Map<String, Object>> obtenerVentasMensuales(Integer idVendedor);
     
-    // Dashboard vendedor (PedidoVendedor)
+    // ============================================================
+    // DASHBOARD VENDEDOR
+    // ============================================================
     List<PedidoVendedor> listarPedidosParaDashboardVendedor(Integer idVendedor);
     void actualizarEstadoOperativo(Integer idPedidoVendedor, String estado);
     
-    // Detalles específicos por vendedor
+    // ============================================================
+    // DETALLES ESPECÍFICOS
+    // ============================================================
     List<DetallePedido> listarDetallesPorVendedor(Integer idPedido, Integer idVendedor);
 }

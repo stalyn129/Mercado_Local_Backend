@@ -11,75 +11,126 @@ public class Pago {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer idPago;
 
-    private Integer idPedido;
+    @OneToOne
+    @JoinColumn(name = "id_pedido", nullable = false)
+    private Pedido pedido; // 🔥 CAMBIAR: Relación en lugar de solo id
+
+    @Column(name = "id_consumidor", nullable = false)
     private Integer idConsumidor;
 
+    @Column(nullable = false)
     private Double monto;
 
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     private MetodoPago metodo; // TARJETA, EFECTIVO, TRANSFERENCIA
 
     @Enumerated(EnumType.STRING)
-    private EstadoPago estado; // PAGADO, PENDIENTE, PENDIENTE_VERIFICACION
+    @Column(nullable = false)
+    private EstadoPago estado; // PENDIENTE, EN_VERIFICACION, PAGADO, RECHAZADO, CANCELADO
 
-    private LocalDateTime fecha = LocalDateTime.now();
+    @Column(name = "fecha_pago", nullable = false)
+    private LocalDateTime fechaPago = LocalDateTime.now();
 
-	public Integer getIdPago() {
-		return idPago;
-	}
+    @Column(name = "fecha_actualizacion")
+    private LocalDateTime fechaActualizacion;
 
-	public void setIdPago(Integer idPago) {
-		this.idPago = idPago;
-	}
+    @Column(name = "referencia_pago", length = 100)
+    private String referenciaPago; // Para transferencias, número de referencia
 
-	public Integer getIdPedido() {
-		return idPedido;
-	}
+    @Column(name = "datos_transaccion", length = 500)
+    private String datosTransaccion; // Información adicional de la transacción
 
-	public void setIdPedido(Integer idPedido) {
-		this.idPedido = idPedido;
-	}
+    // Constructor
+    public Pago() {
+        this.fechaPago = LocalDateTime.now();
+    }
 
-	public Integer getIdConsumidor() {
-		return idConsumidor;
-	}
+    // 🔥 MÉTODO PARA ACTUALIZAR FECHA DE ACTUALIZACIÓN
+    @PreUpdate
+    public void preUpdate() {
+        this.fechaActualizacion = LocalDateTime.now();
+    }
 
-	public void setIdConsumidor(Integer idConsumidor) {
-		this.idConsumidor = idConsumidor;
-	}
+    // Getters y Setters
+    public Integer getIdPago() {
+        return idPago;
+    }
 
-	public Double getMonto() {
-		return monto;
-	}
+    public void setIdPago(Integer idPago) {
+        this.idPago = idPago;
+    }
 
-	public void setMonto(Double monto) {
-		this.monto = monto;
-	}
+    public Pedido getPedido() {
+        return pedido;
+    }
 
-	public MetodoPago getMetodo() {
-		return metodo;
-	}
+    public void setPedido(Pedido pedido) {
+        this.pedido = pedido;
+    }
 
-	public void setMetodo(MetodoPago metodo) {
-		this.metodo = metodo;
-	}
+    public Integer getIdConsumidor() {
+        return idConsumidor;
+    }
 
-	public EstadoPago getEstado() {
-		return estado;
-	}
+    public void setIdConsumidor(Integer idConsumidor) {
+        this.idConsumidor = idConsumidor;
+    }
 
-	public void setEstado(EstadoPago estado) {
-		this.estado = estado;
-	}
+    public Double getMonto() {
+        return monto;
+    }
 
-	public LocalDateTime getFecha() {
-		return fecha;
-	}
+    public void setMonto(Double monto) {
+        this.monto = monto;
+    }
 
-	public void setFecha(LocalDateTime fecha) {
-		this.fecha = fecha;
-	}
-    
-    
-    
+    public MetodoPago getMetodo() {
+        return metodo;
+    }
+
+    public void setMetodo(MetodoPago metodo) {
+        this.metodo = metodo;
+    }
+
+    public EstadoPago getEstado() {
+        return estado;
+    }
+
+    public void setEstado(EstadoPago estado) {
+        this.estado = estado;
+        this.fechaActualizacion = LocalDateTime.now(); // Actualizar al cambiar estado
+    }
+
+    public LocalDateTime getFechaPago() {
+        return fechaPago;
+    }
+
+    public void setFechaPago(LocalDateTime fechaPago) {
+        this.fechaPago = fechaPago;
+    }
+
+    public LocalDateTime getFechaActualizacion() {
+        return fechaActualizacion;
+    }
+
+    public void setFechaActualizacion(LocalDateTime fechaActualizacion) {
+        this.fechaActualizacion = fechaActualizacion;
+    }
+
+    public String getReferenciaPago() {
+        return referenciaPago;
+    }
+
+    public void setReferenciaPago(String referenciaPago) {
+        this.referenciaPago = referenciaPago;
+    }
+
+    public String getDatosTransaccion() {
+        return datosTransaccion;
+    }
+
+    public void setDatosTransaccion(String datosTransaccion) {
+        this.datosTransaccion = datosTransaccion;
+    }
 }

@@ -44,7 +44,6 @@ public class Pedido {
     @Column(name = "estado_pedido")
     private EstadoPedido estadoPedido;
     
-    // 🔥 AGREGAR ESTE CAMPO (SOLO ESTO ES NECESARIO)
     @Enumerated(EnumType.STRING)
     @Column(name = "estado_pedido_vendedor")
     private EstadoPedidoVendedor estadoPedidoVendedor;
@@ -64,26 +63,46 @@ public class Pedido {
     @Column(name = "metodo_pago")
     private String metodoPago;
     
+    // 🔥 CAMPOS DE PAGO MODIFICADOS
+    @Enumerated(EnumType.STRING)
+    @Column(name = "estado_pago")
+    private EstadoPago estadoPago = EstadoPago.PENDIENTE;
+    
     @Column(name = "comprobante_url", nullable = true)
     private String comprobanteUrl;
+    
+    @Column(name = "fecha_subida_comprobante", nullable = true)
+    private LocalDateTime fechaSubidaComprobante;
+    
+    @Column(name = "fecha_verificacion_pago", nullable = true)
+    private LocalDateTime fechaVerificacionPago;
+    
+    @Column(name = "verificado_por", nullable = true)
+    private Integer verificadoPor; // ID del vendedor/admin que verificó
+    
+    @Column(name = "motivo_rechazo", length = 500, nullable = true)
+    private String motivoRechazo;
     
     @Column(name = "datos_tarjeta", nullable = true)
     private String datosTarjeta;
     
-    @Column(name = "pagado")
-    private Boolean pagado = false;
+    // 🔥 ELIMINAR: Ya no necesitamos el booleano 'pagado'
+    // @Column(name = "pagado")
+    // private Boolean pagado = false;
 
-    // 🔥 AGREGAR ESTOS DOS MÉTODOS (SOLO ESTO ES NECESARIO)
-    public EstadoPedidoVendedor getEstadoPedidoVendedor() {
-        return estadoPedidoVendedor;
+    // 🔥 RELACIÓN CON LA ENTIDAD PAGO (SI LA MANTIENES)
+    @OneToOne(mappedBy = "pedido", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonIgnoreProperties({"pedido", "hibernateLazyInitializer", "handler"})
+    private Pago pago;
+    
+    // Constructor
+    public Pedido() {
+        this.fechaPedido = LocalDateTime.now();
+        this.estadoPago = EstadoPago.PENDIENTE;
+        this.estadoPedido = EstadoPedido.CREADO;
     }
     
-    public void setEstadoPedidoVendedor(EstadoPedidoVendedor estadoPedidoVendedor) {
-        this.estadoPedidoVendedor = estadoPedidoVendedor;
-    }
-    
-    // El resto de los getters y setters se mantienen igual...
-    
+    // Getters y Setters
     public Integer getIdPedido() {
         return idPedido;
     }
@@ -108,6 +127,22 @@ public class Pedido {
         this.vendedor = vendedor;
     }
     
+    public String getIdCompraUnificada() {
+        return idCompraUnificada;
+    }
+    
+    public void setIdCompraUnificada(String idCompraUnificada) {
+        this.idCompraUnificada = idCompraUnificada;
+    }
+    
+    public List<DetallePedido> getDetalles() {
+        return detalles;
+    }
+    
+    public void setDetalles(List<DetallePedido> detalles) {
+        this.detalles = detalles;
+    }
+    
     public LocalDateTime getFechaPedido() {
         return fechaPedido;
     }
@@ -122,6 +157,14 @@ public class Pedido {
     
     public void setEstadoPedido(EstadoPedido estadoPedido) {
         this.estadoPedido = estadoPedido;
+    }
+    
+    public EstadoPedidoVendedor getEstadoPedidoVendedor() {
+        return estadoPedidoVendedor;
+    }
+    
+    public void setEstadoPedidoVendedor(EstadoPedidoVendedor estadoPedidoVendedor) {
+        this.estadoPedidoVendedor = estadoPedidoVendedor;
     }
     
     public EstadoSeguimientoPedido getEstadoSeguimiento() {
@@ -164,12 +207,13 @@ public class Pedido {
         this.metodoPago = metodoPago;
     }
     
-    public List<DetallePedido> getDetalles() {
-        return detalles;
+    // 🔥 NUEVOS GETTERS Y SETTERS PARA PAGO
+    public EstadoPago getEstadoPago() {
+        return estadoPago;
     }
     
-    public void setDetalles(List<DetallePedido> detalles) {
-        this.detalles = detalles;
+    public void setEstadoPago(EstadoPago estadoPago) {
+        this.estadoPago = estadoPago;
     }
     
     public String getComprobanteUrl() {
@@ -180,6 +224,38 @@ public class Pedido {
         this.comprobanteUrl = comprobanteUrl;
     }
     
+    public LocalDateTime getFechaSubidaComprobante() {
+        return fechaSubidaComprobante;
+    }
+    
+    public void setFechaSubidaComprobante(LocalDateTime fechaSubidaComprobante) {
+        this.fechaSubidaComprobante = fechaSubidaComprobante;
+    }
+    
+    public LocalDateTime getFechaVerificacionPago() {
+        return fechaVerificacionPago;
+    }
+    
+    public void setFechaVerificacionPago(LocalDateTime fechaVerificacionPago) {
+        this.fechaVerificacionPago = fechaVerificacionPago;
+    }
+    
+    public Integer getVerificadoPor() {
+        return verificadoPor;
+    }
+    
+    public void setVerificadoPor(Integer verificadoPor) {
+        this.verificadoPor = verificadoPor;
+    }
+    
+    public String getMotivoRechazo() {
+        return motivoRechazo;
+    }
+    
+    public void setMotivoRechazo(String motivoRechazo) {
+        this.motivoRechazo = motivoRechazo;
+    }
+    
     public String getDatosTarjeta() {
         return datosTarjeta;
     }
@@ -188,19 +264,36 @@ public class Pedido {
         this.datosTarjeta = datosTarjeta;
     }
     
-    public Boolean getPagado() {
-        return pagado;
-    }
-
-    public void setPagado(Boolean pagado) {
-        this.pagado = pagado;
+    public Pago getPago() {
+        return pago;
     }
     
-    public String getIdCompraUnificada() {
-        return idCompraUnificada;
+    public void setPago(Pago pago) {
+        this.pago = pago;
     }
-
-    public void setIdCompraUnificada(String idCompraUnificada) {
-        this.idCompraUnificada = idCompraUnificada;
+    
+    // 🔥 MÉTODO PARA SUBIR COMPROBANTE
+    public void subirComprobante(String urlComprobante) {
+        this.comprobanteUrl = urlComprobante;
+        this.fechaSubidaComprobante = LocalDateTime.now();
+        this.estadoPago = EstadoPago.EN_VERIFICACION;
+        this.estadoPedido = EstadoPedido.PENDIENTE;
+    }
+    
+    // 🔥 MÉTODO PARA VERIFICAR PAGO
+    public void verificarPago(boolean aprobado, Integer idVerificador, String motivo) {
+        if (aprobado) {
+            this.estadoPago = EstadoPago.PAGADO;
+            this.estadoPedido = EstadoPedido.PROCESANDO;
+            this.estadoPedidoVendedor = EstadoPedidoVendedor.EN_PROCESO;
+        } else {
+            this.estadoPago = EstadoPago.RECHAZADO;
+            this.motivoRechazo = motivo;
+            this.comprobanteUrl = null; // Permite subir nuevo comprobante
+            this.fechaSubidaComprobante = null;
+        }
+        
+        this.fechaVerificacionPago = LocalDateTime.now();
+        this.verificadoPor = idVerificador;
     }
 }
