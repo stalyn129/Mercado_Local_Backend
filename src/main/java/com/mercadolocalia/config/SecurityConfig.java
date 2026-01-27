@@ -60,12 +60,13 @@ public class SecurityConfig {
                 .requestMatchers("/api/admin/**").hasAnyRole("ADMIN", "VENDEDOR")
                 .requestMatchers("/admin/**").hasAnyRole("ADMIN", "VENDEDOR")
                 
-                .requestMatchers("/reportes/**").permitAll() 
+     
+                .requestMatchers("/reportes/**").hasAnyRole("ADMIN", "VENDEDOR")
 
-             // 🔥 NUEVO: PERMITE /api/productos PARA GET (admin dashboard)
+   
                 .requestMatchers(HttpMethod.GET, "/api/productos").hasRole("ADMIN")
                 
-                // 🔥 NUEVO: PERMITE /productos PARA GET (admin dashboard)
+              
                 .requestMatchers(HttpMethod.GET, "/productos").hasAnyRole("ADMIN", "VENDEDOR", "CONSUMIDOR")
                 
                 // Productos públicos (solo lectura)
@@ -91,7 +92,8 @@ public class SecurityConfig {
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 .requestMatchers("/admin/**").hasRole("ADMIN")
                 .requestMatchers("/admin/logs/**").hasRole("ADMIN")
-                .requestMatchers("/reportes/**").hasRole("ADMIN")
+             // ✅ DEBERÍA SER - Ambos roles pueden ver reportes
+                .requestMatchers("/reportes/**").hasAnyRole("ADMIN", "VENDEDOR")
 
              // 🔔 NOTIFICACIONES
                 .requestMatchers("/notificaciones/**")
