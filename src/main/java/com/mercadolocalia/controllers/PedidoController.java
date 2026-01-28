@@ -1,5 +1,6 @@
 package com.mercadolocalia.controllers;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -1200,4 +1201,273 @@ public class PedidoController {
                     .body(Map.of("error", "Error al obtener pedidos de la compra: " + e.getMessage()));
         }
     }
+    
+ // ============================================================
+ // 🔢 NUEVO: CONTADOR DE PEDIDOS POR VENDEDOR
+ // ============================================================
+ @GetMapping("/vendedor/contador-pedidos")
+ @PreAuthorize("hasRole('VENDEDOR')")
+ public ResponseEntity<?> obtenerContadorPedidosVendedor(Authentication authentication) {
+     try {
+         System.out.println("🔍 ========================================");
+         System.out.println("🔍 SOLICITANDO CONTADOR DE PEDIDOS POR VENDEDOR");
+         System.out.println("🔍 ========================================");
+         
+         // 1️⃣ Validar usuario autenticado
+         Usuario usuario = usuarioRepository.findByCorreo(authentication.getName())
+                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Usuario no autenticado"));
+         
+         System.out.println("✅ Usuario encontrado: " + usuario.getCorreo());
+
+         // 2️⃣ Validar que sea vendedor
+         Vendedor vendedor = vendedorRepository.findByUsuario(usuario)
+                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "Usuario no es vendedor"));
+
+         System.out.println("✅ Vendedor encontrado: " + vendedor.getNombreEmpresa());
+         
+         // 3️⃣ Contar total de pedidos de este vendedor
+         long totalPedidos = pedidoRepository.countByVendedorIdVendedor(vendedor.getIdVendedor());
+         
+         System.out.println("✅ Total pedidos del vendedor: " + totalPedidos);
+         
+         // 4️⃣ Devolver respuesta
+         Map<String, Object> respuesta = new HashMap<>();
+         respuesta.put("success", true);
+         respuesta.put("totalPedidos", totalPedidos);
+         respuesta.put("vendedorId", vendedor.getIdVendedor());
+         respuesta.put("vendedorNombre", vendedor.getNombreEmpresa());
+         respuesta.put("fechaConsulta", new java.util.Date());
+         
+         return ResponseEntity.ok(respuesta);
+         
+     } catch (ResponseStatusException e) {
+         System.out.println("❌ ERROR CONTROLADO: " + e.getReason());
+         throw e;
+     } catch (Exception e) {
+         System.out.println("❌ ========================================");
+         System.out.println("❌ ERROR OBTENIENDO CONTADOR DE PEDIDOS");
+         System.out.println("❌ ========================================");
+         System.out.println("❌ Mensaje: " + e.getMessage());
+         e.printStackTrace();
+         
+         Map<String, Object> errorResponse = new HashMap<>();
+         errorResponse.put("success", false);
+         errorResponse.put("error", "Error al obtener contador de pedidos");
+         errorResponse.put("detalle", e.getMessage());
+         
+         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+     }
+ }
+
+ // ============================================================
+ // 🔢 NUEVO: OBTENER MIS PEDIDOS CON NUMERACIÓN LOCAL
+ // ============================================================
+ @GetMapping("/vendedor/mis-pedidos")
+ @PreAuthorize("hasRole('VENDEDOR')")
+ public ResponseEntity<?> obtenerMisPedidosConNumeracion(Authentication authentication) {
+     try {
+         System.out.println("🔍 ========================================");
+         System.out.println("🔍 SOLICITANDO PEDIDOS CON NUMERACIÓN LOCAL");
+         System.out.println("🔍 ========================================");
+         
+         // 1️⃣ Validar usuario autenticado
+         Usuario usuario = usuarioRepository.findByCorreo(authentication.getName())
+                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Usuario no autenticado"));
+         
+         System.out.println("✅ Usuario encontrado: " + usuario.getCorreo());
+
+         // 2️⃣ Validar que sea vendedor
+         Vendedor vendedor = vendedorRepository.findByUsuario(usuario)
+                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "Usuario no es vendedor"));
+
+         System.out.println("✅ Vendedor encontrado: " + vendedor.getNombreEmpresa());
+         
+         // 3️⃣ Obtener todos los pedidos del vendedor ordenados por fecha (más reciente primero)
+         List<Pedido> pedidos = pedidoRepository.findByVendedorIdVendedorOrderByFechaPedidoDesc(vendedor.getIdVendedor());
+         
+         System.out.println("✅ Total pedidos encontrados: " + pedidos.size());
+         
+         // 4️⃣ Agregar numeración local (1, 2, 3... para este vendedor específico)
+         List<Map<String, Object>> pedidosConNumeracion = new ArrayList<>();
+         
+         for (int i = 0; i < pedidos.size(); i++) {
+             Pedido pedido = pedidos.get(i);
+             Map<String, Object> pedidoMap = new HashMap<>();
+             
+             // Copiar datos del pedido
+             pedidoMap.put("idPedido", pedido.getIdPedido());
+             pedidoMap.put("total", pedido.getTotal());
+             pedidoMap.put("subtotal", pedido.getSubtotal());
+             pedidoMap.put("iva", pedido.getIva());
+             pedidoMap.put("fechaPedido", pedido.getFechaPedido());
+             pedidoMap.put("metodoPago", pedido.getMetodoPago());
+             pedidoMap.put("estadoPago", pedido.getEstadoPago());
+             pedidoMap.put("estadoPedido", pedido.getEstadoPedido());
+             pedidoMap.put("estadoPedidoVendedor", pedido.getEstadoPedidoVendedor());
+             pedidoMap.put("comprobanteUrl", pedido.getComprobanteUrl());
+             pedidoMap.put("idCompraUnificada", pedido.getIdCompraUnificada());
+             
+             // Agregar información del consumidor
+             if (pedido.getConsumidor() != null && pedido.getConsumidor().getUsuario() != null) {
+                 Map<String, Object> consumidorInfo = new HashMap<>();
+                 consumidorInfo.put("idConsumidor", pedido.getConsumidor().getIdConsumidor());
+                 consumidorInfo.put("nombre", pedido.getConsumidor().getUsuario().getNombre());
+                 consumidorInfo.put("apellido", pedido.getConsumidor().getUsuario().getApellido());
+                 consumidorInfo.put("correo", pedido.getConsumidor().getUsuario().getCorreo());
+                 pedidoMap.put("consumidor", consumidorInfo);
+             }
+             
+             // Agregar detalles del pedido
+             if (pedido.getDetalles() != null && !pedido.getDetalles().isEmpty()) {
+                 List<Map<String, Object>> detalles = new ArrayList<>();
+                 for (DetallePedido detalle : pedido.getDetalles()) {
+                     Map<String, Object> detalleMap = new HashMap<>();
+                     detalleMap.put("idDetallePedido", detalle.getIdDetalle());
+                     detalleMap.put("cantidad", detalle.getCantidad());
+                     detalleMap.put("precio", detalle.getPrecioUnitario());
+                     detalleMap.put("subtotal", detalle.getSubtotal());
+                     
+                     if (detalle.getProducto() != null) {
+                         Map<String, Object> productoInfo = new HashMap<>();
+                         productoInfo.put("idProducto", detalle.getProducto().getIdProducto());
+                         productoInfo.put("nombreProducto", detalle.getProducto().getNombreProducto());
+                         productoInfo.put("descripcion", detalle.getProducto().getDescripcionProducto());
+                         productoInfo.put("imagenProducto", detalle.getProducto().getImagenProducto());
+                         productoInfo.put("precio", detalle.getProducto().getPrecioProducto());
+                         detalleMap.put("producto", productoInfo);
+                     }
+                     
+                     detalles.add(detalleMap);
+                 }
+                 pedidoMap.put("detalles", detalles);
+             }
+             
+             // 🔥 AGREGAR NUMERACIÓN LOCAL (el más reciente = 1)
+             pedidoMap.put("numeroPedidoVendedor", i + 1);
+             pedidoMap.put("posicion", i + 1);
+             pedidoMap.put("esPrimerPedido", i == 0);
+             pedidoMap.put("esUltimoPedido", i == pedidos.size() - 1);
+             
+             pedidosConNumeracion.add(pedidoMap);
+         }
+         
+         // 5️⃣ Preparar respuesta
+         Map<String, Object> respuesta = new HashMap<>();
+         respuesta.put("success", true);
+         respuesta.put("totalPedidos", pedidos.size());
+         respuesta.put("pedidos", pedidosConNumeracion);
+         respuesta.put("vendedorId", vendedor.getIdVendedor());
+         respuesta.put("vendedorNombre", vendedor.getNombreEmpresa());
+         respuesta.put("fechaConsulta", new java.util.Date());
+         
+         return ResponseEntity.ok(respuesta);
+         
+     } catch (ResponseStatusException e) {
+         System.out.println("❌ ERROR CONTROLADO: " + e.getReason());
+         throw e;
+     } catch (Exception e) {
+         System.out.println("❌ ========================================");
+         System.out.println("❌ ERROR OBTENIENDO PEDIDOS CON NUMERACIÓN");
+         System.out.println("❌ ========================================");
+         System.out.println("❌ Mensaje: " + e.getMessage());
+         e.printStackTrace();
+         
+         Map<String, Object> errorResponse = new HashMap<>();
+         errorResponse.put("success", false);
+         errorResponse.put("error", "Error al obtener pedidos con numeración");
+         errorResponse.put("detalle", e.getMessage());
+         
+         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+     }
+ }
+
+ // ============================================================
+ // 🔢 NUEVO: OBTENER NÚMERO SECUENCIAL DE UN PEDIDO ESPECÍFICO
+ // ============================================================
+ @GetMapping("/vendedor/pedido/{idPedido}/numero-secuencial")
+ @PreAuthorize("hasRole('VENDEDOR')")
+ public ResponseEntity<?> obtenerNumeroSecuencialPedido(
+         @PathVariable Integer idPedido,
+         Authentication authentication) {
+     
+     try {
+         System.out.println("🔍 ========================================");
+         System.out.println("🔍 SOLICITANDO NÚMERO SECUENCIAL DE PEDIDO");
+         System.out.println("🔍 ========================================");
+         System.out.println("🔍 ID Pedido: " + idPedido);
+         
+         // 1️⃣ Validar usuario autenticado
+         Usuario usuario = usuarioRepository.findByCorreo(authentication.getName())
+                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Usuario no autenticado"));
+         
+         System.out.println("✅ Usuario encontrado: " + usuario.getCorreo());
+
+         // 2️⃣ Validar que sea vendedor
+         Vendedor vendedor = vendedorRepository.findByUsuario(usuario)
+                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "Usuario no es vendedor"));
+
+         System.out.println("✅ Vendedor encontrado: " + vendedor.getNombreEmpresa());
+         
+         // 3️⃣ Obtener el pedido específico
+         Pedido pedido = pedidoRepository.findById(idPedido)
+                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Pedido no encontrado"));
+         
+         // 4️⃣ Verificar que el pedido pertenece a este vendedor
+         if (!pedido.getVendedor().getIdVendedor().equals(vendedor.getIdVendedor())) {
+             System.out.println("❌ El pedido no pertenece a este vendedor");
+             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No tienes permisos para acceder a este pedido");
+         }
+         
+         System.out.println("✅ Pedido encontrado: #" + pedido.getIdPedido());
+         System.out.println("✅ Fecha del pedido: " + pedido.getFechaPedido());
+         
+         // 5️⃣ Calcular el número secuencial:
+         // Contar cuántos pedidos tiene este vendedor con fecha ANTERIOR a este pedido
+         long pedidosAnteriores = pedidoRepository.countByVendedorAndFechaAnterior(
+             vendedor.getIdVendedor(), 
+             pedido.getFechaPedido()
+         );
+         
+         // El número secuencial es: pedidos anteriores + 1
+         long numeroSecuencial = pedidosAnteriores + 1;
+         
+         System.out.println("✅ Pedidos anteriores: " + pedidosAnteriores);
+         System.out.println("✅ Número secuencial calculado: " + numeroSecuencial);
+         
+         // 6️⃣ También obtener el total de pedidos del vendedor
+         long totalPedidos = pedidoRepository.countByVendedorIdVendedor(vendedor.getIdVendedor());
+         
+         // 7️⃣ Preparar respuesta
+         Map<String, Object> respuesta = new HashMap<>();
+         respuesta.put("success", true);
+         respuesta.put("idPedido", pedido.getIdPedido());
+         respuesta.put("numeroSecuencial", numeroSecuencial);
+         respuesta.put("totalPedidosVendedor", totalPedidos);
+         respuesta.put("fechaPedido", pedido.getFechaPedido());
+         respuesta.put("vendedorId", vendedor.getIdVendedor());
+         respuesta.put("vendedorNombre", vendedor.getNombreEmpresa());
+         respuesta.put("posicion", numeroSecuencial); // Para uso directo en frontend
+         respuesta.put("esPrimerPedido", numeroSecuencial == 1);
+         respuesta.put("esUltimoPedido", numeroSecuencial == totalPedidos);
+         
+         return ResponseEntity.ok(respuesta);
+         
+     } catch (ResponseStatusException e) {
+         System.out.println("❌ ERROR CONTROLADO: " + e.getReason());
+         throw e;
+     } catch (Exception e) {
+         System.out.println("❌ ========================================");
+         System.out.println("❌ ERROR OBTENIENDO NÚMERO SECUENCIAL");
+         System.out.println("❌ ========================================");
+         System.out.println("❌ Mensaje: " + e.getMessage());
+         e.printStackTrace();
+         
+         Map<String, Object> errorResponse = new HashMap<>();
+         errorResponse.put("success", false);
+         errorResponse.put("error", "Error al obtener número secuencial del pedido");
+         errorResponse.put("detalle", e.getMessage());
+         
+         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+     }
+ }
 }

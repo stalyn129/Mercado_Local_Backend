@@ -1,5 +1,6 @@
 package com.mercadolocalia.repositories;
 
+import java.sql.Date;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -378,5 +379,17 @@ public interface PedidoRepository extends JpaRepository<Pedido, Integer> {
         ORDER BY MONTH(ped.fechaPedido)
     """)
     List<Object[]> obtenerVentasMensualesPorVendedor1(@Param("idVendedor") Integer idVendedor);
-
+    
+    // 🔥 NUEVO: Contar pedidos por vendedor
+    long countByVendedorIdVendedor(Integer idVendedor);
+    
+    // 🔥 NUEVO: Obtener pedidos por vendedor ordenados por fecha descendente
+    List<Pedido> findByVendedorIdVendedorOrderByFechaPedidoDesc(Integer idVendedor);
+    
+ // 🔥 NUEVO: Contar pedidos por vendedor con fecha anterior a una fecha dada
+    @Query("SELECT COUNT(p) FROM Pedido p WHERE p.vendedor.idVendedor = :idVendedor AND p.fechaPedido < :fecha")
+    long countByVendedorAndFechaAnterior(
+        @Param("idVendedor") Integer idVendedor, 
+        @Param("fecha") LocalDateTime fecha  // Cambia Date por LocalDateTime
+    );
 }
