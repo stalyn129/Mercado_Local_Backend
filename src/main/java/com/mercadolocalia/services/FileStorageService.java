@@ -22,4 +22,8 @@ public interface FileStorageService {
     boolean isValidImage(MultipartFile file);
     boolean isValidComprobante(MultipartFile file);
     long getFileSize(MultipartFile file);
+    
+    // Métodos adicionales para manejo de rutas (NUEVOS)
+    String getFilenameFromPath(String path);
+    String getRelativePathFromUrl(String url);
 }
