@@ -15,6 +15,12 @@ public class RegisterRequest {
     private Integer idRol;
 
     // ======================================
+    // CAMPOS NUEVOS PARA GOOGLE OAUTH ✅
+    // ======================================
+    private Boolean googleAuth = false;      // Indica si es registro con Google
+    private Boolean emailVerified = false;   // Indica si el email está verificado
+
+    // ======================================
     // DATOS DEL CONSUMIDOR
     // ======================================
     private String cedula;
@@ -30,6 +36,16 @@ public class RegisterRequest {
     private String telefonoEmpresa;
     private String descripcion;
 
+    // ======================================
+    // CONSTRUCTORES
+    // ======================================
+    
+    public RegisterRequest() {
+        // Valores por defecto para Google OAuth
+        this.googleAuth = false;
+        this.emailVerified = false;
+    }
+    
     // ======================================
     // GETTERS Y SETTERS
     // ======================================
@@ -80,6 +96,24 @@ public class RegisterRequest {
 
     public void setIdRol(Integer idRol) {
         this.idRol = idRol;
+    }
+
+    // ====== Campos Google OAuth ====== ✅
+
+    public Boolean getGoogleAuth() {
+        return googleAuth;
+    }
+
+    public void setGoogleAuth(Boolean googleAuth) {
+        this.googleAuth = googleAuth;
+    }
+
+    public Boolean getEmailVerified() {
+        return emailVerified;
+    }
+
+    public void setEmailVerified(Boolean emailVerified) {
+        this.emailVerified = emailVerified;
     }
 
     // ====== Datos Consumidor ======
@@ -148,5 +182,30 @@ public class RegisterRequest {
 
     public void setDescripcion(String descripcion) {
         this.descripcion = descripcion;
+    }
+    
+    // ======================================
+    // MÉTODO TOSTRING PARA DEBUG
+    // ======================================
+    @Override
+    public String toString() {
+        return "RegisterRequest{" +
+                "nombre='" + nombre + '\'' +
+                ", apellido='" + apellido + '\'' +
+                ", correo='" + correo + '\'' +
+                ", contrasena='" + (contrasena != null ? "[PROTEGIDA]" : "null") + '\'' +
+                ", fechaNacimiento='" + fechaNacimiento + '\'' +
+                ", idRol=" + idRol +
+                ", googleAuth=" + googleAuth +
+                ", emailVerified=" + emailVerified +
+                ", cedula='" + cedula + '\'' +
+                ", direccion='" + direccion + '\'' +
+                ", telefono='" + telefono + '\'' +
+                ", nombreEmpresa='" + nombreEmpresa + '\'' +
+                ", ruc='" + ruc + '\'' +
+                ", direccionEmpresa='" + direccionEmpresa + '\'' +
+                ", telefonoEmpresa='" + telefonoEmpresa + '\'' +
+                ", descripcion='" + descripcion + '\'' +
+                '}';
     }
 }

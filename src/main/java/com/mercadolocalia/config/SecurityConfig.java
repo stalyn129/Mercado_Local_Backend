@@ -57,16 +57,11 @@ public class SecurityConfig {
 
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 .requestMatchers("/admin/**").hasRole("ADMIN")
-                .requestMatchers("/api/admin/**").hasAnyRole("ADMIN", "VENDEDOR")
-                .requestMatchers("/admin/**").hasAnyRole("ADMIN", "VENDEDOR")
                 
-     
                 .requestMatchers("/reportes/**").hasAnyRole("ADMIN", "VENDEDOR")
 
-   
                 .requestMatchers(HttpMethod.GET, "/api/productos").hasRole("ADMIN")
                 
-              
                 .requestMatchers(HttpMethod.GET, "/productos").hasAnyRole("ADMIN", "VENDEDOR", "CONSUMIDOR")
                 
                 // Productos públicos (solo lectura)
@@ -92,10 +87,8 @@ public class SecurityConfig {
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 .requestMatchers("/admin/**").hasRole("ADMIN")
                 .requestMatchers("/admin/logs/**").hasRole("ADMIN")
-             // ✅ DEBERÍA SER - Ambos roles pueden ver reportes
-                .requestMatchers("/reportes/**").hasAnyRole("ADMIN", "VENDEDOR")
 
-             // 🔔 NOTIFICACIONES
+                // 🔔 NOTIFICACIONES
                 .requestMatchers("/notificaciones/**")
                 .hasRole("CONSUMIDOR")
 
@@ -103,11 +96,6 @@ public class SecurityConfig {
                 // 🔥 PERMITIR MICRO SERVICIO IA
                 // ============================
                 .requestMatchers("/api/ia/**").permitAll()
-                // Esto habilita:
-                // - /api/ia/precio/{id}
-                // - /api/ia/demanda/{id}
-                // - /api/ia/recomendar/{id}
-                // - /api/ia/chat   ✔✔✔
 
                 // ============================
                 // 🛒 VENDEDOR
@@ -123,30 +111,30 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/valoraciones/vendedor/**").hasRole("VENDEDOR")
                 .requestMatchers("/pedidos/estadisticas/**").hasRole("VENDEDOR")
                 
-             // ============================
-             // 👤 CONSUMIDOR
-             // ============================
-             .requestMatchers("/consumidor/**").hasRole("CONSUMIDOR")
-             .requestMatchers(HttpMethod.POST, "/valoraciones/crear").hasRole("CONSUMIDOR")
-             .requestMatchers(HttpMethod.GET, "/valoraciones/**").permitAll()
-             .requestMatchers(HttpMethod.POST, "/favoritos/agregar").hasRole("CONSUMIDOR")
-             .requestMatchers(HttpMethod.GET, "/favoritos/listar/**").hasRole("CONSUMIDOR")
+                // ============================
+                // 👤 CONSUMIDOR
+                // ============================
+                .requestMatchers("/consumidor/**").hasRole("CONSUMIDOR")
+                .requestMatchers(HttpMethod.POST, "/valoraciones/crear").hasRole("CONSUMIDOR")
+                .requestMatchers(HttpMethod.GET, "/valoraciones/**").permitAll()
+                .requestMatchers(HttpMethod.POST, "/favoritos/agregar").hasRole("CONSUMIDOR")
+                .requestMatchers(HttpMethod.GET, "/favoritos/listar/**").hasRole("CONSUMIDOR")
 
-             // ✅ Mis pedidos (SIN mandar id)
-             .requestMatchers(HttpMethod.GET, "/pedidos/mis-pedidos").hasRole("CONSUMIDOR")
+                // ✅ Mis pedidos (SIN mandar id)
+                .requestMatchers(HttpMethod.GET, "/pedidos/mis-pedidos").hasRole("CONSUMIDOR")
 
-             // ✅ Flujo compra
-             .requestMatchers(HttpMethod.POST, "/pedidos/checkout").hasRole("CONSUMIDOR")
-             .requestMatchers(HttpMethod.POST, "/pedidos/comprar-ahora").hasRole("CONSUMIDOR")
-             .requestMatchers(HttpMethod.PUT, "/pedidos/finalizar/**").hasRole("CONSUMIDOR")
-             .requestMatchers(HttpMethod.PUT, "/pedidos/*/cancelar").hasRole("CONSUMIDOR")
+                // ✅ Flujo compra
+                .requestMatchers(HttpMethod.POST, "/pedidos/checkout").hasRole("CONSUMIDOR")
+                .requestMatchers(HttpMethod.POST, "/pedidos/comprar-ahora").hasRole("CONSUMIDOR")
+                .requestMatchers(HttpMethod.PUT, "/pedidos/finalizar/**").hasRole("CONSUMIDOR")
+                .requestMatchers(HttpMethod.PUT, "/pedidos/*/cancelar").hasRole("CONSUMIDOR")
 
-             // ✅ Cualquier otro pedido del consumidor
-             .requestMatchers("/pedidos/**").hasRole("CONSUMIDOR")
+                // ✅ Cualquier otro pedido del consumidor
+                .requestMatchers("/pedidos/**").hasRole("CONSUMIDOR")
 
-             // carrito
-             .requestMatchers(HttpMethod.POST, "/carrito/agregar").hasRole("CONSUMIDOR")
-             .requestMatchers("/carrito/**").authenticated()
+                // carrito
+                .requestMatchers(HttpMethod.POST, "/carrito/agregar").hasRole("CONSUMIDOR")
+                .requestMatchers("/carrito/**").authenticated()
 
                 // ============================
                 // 🔐 CUALQUIER OTRA RUTA REQUIERE TOKEN

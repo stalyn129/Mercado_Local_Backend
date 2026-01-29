@@ -1,49 +1,57 @@
 package com.mercadolocalia.entities;
 
+import jakarta.persistence.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-
-import jakarta.persistence.*;
 
 @Entity
 @Table(name = "usuarios")
 public class Usuario {
-
+    
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id_usuario")
     private Integer idUsuario;
-
-    @Column(name = "nombre_usuario", nullable = false, length = 100)
+    
     private String nombre;
-
-    @Column(name = "apellido_usuario", nullable = false, length = 100)
     private String apellido;
-
-    @Column(name = "correo_electronico", nullable = false, unique = true, length = 100)
+    
+    @Column(unique = true, nullable = false)
     private String correo;
-
-    @Column(name = "contrasena_usuario", nullable = false, length = 255)
+    
     private String contrasena;
-
-    @Column(name = "fecha_nacimiento")
+    
     private LocalDate fechaNacimiento;
-
+    
     @ManyToOne
     @JoinColumn(name = "id_rol", nullable = false)
     private Rol rol;
-
-    @Column(name = "es_administrador")
+    
     private Boolean esAdministrador;
-
-    @Column(name = "fecha_registro")
+    
     private LocalDateTime fechaRegistro;
-
-    @Column(name = "estado")
+    
     private String estado;
-
-    // ======================= GETTERS & SETTERS =======================
-
+    
+    // ✅ CAMPOS NUEVOS PARA GOOGLE OAUTH
+    @Column(name = "google_auth")
+    private Boolean googleAuth = false;
+    
+    @Column(name = "email_verificado")
+    private Boolean emailVerificado = false;
+    
+    // ======================================
+    // CONSTRUCTORES
+    // ======================================
+    
+    public Usuario() {
+        this.googleAuth = false;
+        this.emailVerificado = false;
+    }
+    
+    // ======================================
+    // GETTERS Y SETTERS
+    // ======================================
+    
     public Integer getIdUsuario() {
         return idUsuario;
     }
@@ -122,5 +130,39 @@ public class Usuario {
 
     public void setEstado(String estado) {
         this.estado = estado;
+    }
+
+    // ✅ GETTERS Y SETTERS NUEVOS
+    
+    public Boolean getGoogleAuth() {
+        return googleAuth;
+    }
+
+    public void setGoogleAuth(Boolean googleAuth) {
+        this.googleAuth = googleAuth;
+    }
+
+    public Boolean getEmailVerificado() {
+        return emailVerificado;
+    }
+
+    public void setEmailVerificado(Boolean emailVerificado) {
+        this.emailVerificado = emailVerificado;
+    }
+    
+    // ======================================
+    // MÉTODO TOSTRING PARA DEBUG
+    // ======================================
+    @Override
+    public String toString() {
+        return "Usuario{" +
+                "idUsuario=" + idUsuario +
+                ", nombre='" + nombre + '\'' +
+                ", apellido='" + apellido + '\'' +
+                ", correo='" + correo + '\'' +
+                ", googleAuth=" + googleAuth +
+                ", emailVerificado=" + emailVerificado +
+                ", rol=" + (rol != null ? rol.getNombreRol() : "null") +
+                '}';
     }
 }
