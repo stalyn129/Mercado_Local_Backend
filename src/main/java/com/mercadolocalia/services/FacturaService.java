@@ -2,15 +2,24 @@ package com.mercadolocalia.services;
 
 import com.mercadolocalia.dto.FacturaRequest;
 import com.mercadolocalia.dto.FacturaEstadoRequest;
-import com.mercadolocalia.entities.Factura;
+import com.mercadolocalia.dto.FacturaResponse;
+import java.util.List;
 
 public interface FacturaService {
 
-    Factura crearFactura(FacturaRequest request);
+    FacturaResponse crearFactura(FacturaRequest request);
 
-    Factura obtenerPorId(Integer idFactura);
+    FacturaResponse obtenerPorId(Integer idFactura);
 
-    Factura obtenerPorPedido(Integer idPedido);
+    FacturaResponse obtenerPorPedido(Integer idPedido);
 
-    Factura actualizarEstado(Integer idFactura, FacturaEstadoRequest request);
+    FacturaResponse actualizarEstado(Integer idFactura, FacturaEstadoRequest request);
+    
+    // NUEVOS MÉTODOS
+    List<FacturaResponse> obtenerPorConsumidor(Integer idConsumidor);
+    
+    List<FacturaResponse> obtenerTodas();
+    
+    // MÉTODO PARA GENERAR PDF SIMPLE
+    String generarPDFSimple(Integer idFactura);
 }

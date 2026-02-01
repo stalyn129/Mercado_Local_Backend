@@ -73,6 +73,11 @@ public class SecurityConfig {
                 
                 .requestMatchers("/api/public/**").permitAll()
                 .requestMatchers("/chatbot").authenticated()
+             // ============================
+                // 📄 FACTURAS - AGREGAR ESTAS LÍNEAS
+                // ============================
+                .requestMatchers("/api/facturas/**").authenticated() // O hasRole("CONSUMIDOR")
+                .requestMatchers("/facturas/**").authenticated() // También esta ruta si la usas
 
                 // ============================
                 // 👑 ADMIN - GESTIÓN DE CATEGORÍAS

@@ -16,14 +16,12 @@ public class Factura {
     @JoinColumn(name = "id_pedido", nullable = false)
     private Pedido pedido;
 
+    @ManyToOne
+    @JoinColumn(name = "id_consumidor", nullable = false)
+    private Consumidor consumidor;
+
     @Column(name = "numero_factura", nullable = false, unique = true, length = 20)
     private String numeroFactura;
-
-    @Column(name = "ruc_emisor", nullable = false, length = 13)
-    private String rucEmisor;
-
-    @Column(name = "razon_social", nullable = false, length = 150)
-    private String razonSocial;
 
     @Column(name = "fecha_emision")
     private LocalDateTime fechaEmision;
@@ -39,6 +37,12 @@ public class Factura {
 
     @Column(name = "estado")
     private String estado;
+
+    @Column(name = "metodo_pago", length = 50)
+    private String metodoPago;
+
+    @Column(name = "ruta_pdf", length = 255)
+    private String rutaPdf;
 
     // GETTERS & SETTERS
 
@@ -58,28 +62,20 @@ public class Factura {
         this.pedido = pedido;
     }
 
+    public Consumidor getConsumidor() {
+        return consumidor;
+    }
+
+    public void setConsumidor(Consumidor consumidor) {
+        this.consumidor = consumidor;
+    }
+
     public String getNumeroFactura() {
         return numeroFactura;
     }
 
     public void setNumeroFactura(String numeroFactura) {
         this.numeroFactura = numeroFactura;
-    }
-
-    public String getRucEmisor() {
-        return rucEmisor;
-    }
-
-    public void setRucEmisor(String rucEmisor) {
-        this.rucEmisor = rucEmisor;
-    }
-
-    public String getRazonSocial() {
-        return razonSocial;
-    }
-
-    public void setRazonSocial(String razonSocial) {
-        this.razonSocial = razonSocial;
     }
 
     public LocalDateTime getFechaEmision() {
@@ -120,5 +116,21 @@ public class Factura {
 
     public void setEstado(String estado) {
         this.estado = estado;
+    }
+
+    public String getMetodoPago() {
+        return metodoPago;
+    }
+
+    public void setMetodoPago(String metodoPago) {
+        this.metodoPago = metodoPago;
+    }
+
+    public String getRutaPdf() {
+        return rutaPdf;
+    }
+
+    public void setRutaPdf(String rutaPdf) {
+        this.rutaPdf = rutaPdf;
     }
 }
