@@ -13,18 +13,23 @@ public interface ProductoService {
     ProductoResponse actualizarProducto(Integer id, ProductoRequest request);
     void eliminarProducto(Integer id);
 
+    // ====================== BORRADO LÓGICO ======================
+    ProductoResponse desactivarProducto(Integer id, String motivo);
+    ProductoResponse reactivarProducto(Integer id);
+    
     // ====================== LECTURA NORMAL ======================
-    ProductoResponse obtenerPorId(Integer id);  // LO QUE USA EXPLORAR Y ESTÁ FUNCIONANDO
+    ProductoResponse obtenerPorId(Integer id);
     List<ProductoResponse> listarPorVendedor(Integer idVendedor);
     List<ProductoResponse> listarPorSubcategoria(Integer idSubcategoria);
     List<ProductoResponse> listarTodos();
+    List<ProductoResponse> listarActivos(); // NUEVO: solo activos
+    List<ProductoResponse> listarInactivos(); // NUEVO: solo inactivos
     ProductoResponse cambiarEstado(Integer id, String nuevoEstado);
 
     // ====================== DETALLE COMPLETO ======================
-    // 🔥 CON VALORACIONES Y PROMEDIO
     ProductoDetalleResponse obtenerDetalleProducto(Integer idProducto);
     
     // ====================== TOP 20 PARA HOME ======================
     List<ProductoResponse> listarTop20Mejores();
-
+    
 }

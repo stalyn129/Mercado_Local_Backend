@@ -1,14 +1,15 @@
 package com.mercadolocalia.services.impl;
 
-import java.io.File;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.mercadolocalia.dto.ProductoRequest;
 import com.mercadolocalia.dto.ProductoResponse;
@@ -34,30 +35,89 @@ public class ProductoServiceImpl implements ProductoService {
 
     // ===================== CREAR =====================
     @Override
+    @Transactional
     public ProductoResponse crearProducto(ProductoRequest request) {
         Producto p = new Producto();
         asignarDatos(p, request);
         p.setFechaPublicacion(LocalDateTime.now());
         p.setEstado("Disponible");
+        p.setActivo(true); // ✅ Por defecto activo
+        p.setUltimaActualizacion(LocalDateTime.now());
         guardarImagen(request, p);
         productoRepository.save(p);
         return convertir(p);
     }
 
-    // ===================== ACTUALIZAR =====================
+    // ===================== ACTUALIZAR (SOLO NOMBRE Y PRECIO) =====================
     @Override
+    @Transactional
     public ProductoResponse actualizarProducto(Integer id, ProductoRequest request) {
         Producto p = productoRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Producto no encontrado con id " + id));
+        
+        // Verificar que esté activo
+        if (!p.estaActivo()) {
+            throw new RuntimeException("No se puede actualizar un producto inactivo");
+        }
+        
+        // ✅ SOLO ACTUALIZAR NOMBRE Y PRECIO
+        if (request.getNombreProducto() != null && !request.getNombreProducto().trim().isEmpty()) {
+            p.setNombreProducto(request.getNombreProducto());
+        }
+        
+        if (request.getPrecioProducto() != null && request.getPrecioProducto() > 0) {
+            p.setPrecioProducto(request.getPrecioProducto());
+        }
+        
+        // ❌ NO permitir cambiar stock, unidad, etc.
+        
+        p.setUltimaActualizacion(LocalDateTime.now());
+        
+        if (request.getImagenProducto() != null && !request.getImagenProducto().isEmpty()) {
+            p.setImagenProducto(request.getImagenProducto());
+        }
+        
+        productoRepository.save(p);
+        return convertir(p);
+    }
 
-        asignarDatos(p, request);
-        guardarImagen(request, p);
+    // ===================== BORRADO LÓGICO - ELIMINAR =====================
+    @Override
+    @Transactional
+    public void eliminarProducto(Integer id) {
+        Producto p = productoRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Producto no encontrado"));
+        
+        // BORRADO LÓGICO - Desactivar en lugar de eliminar
+        p.desactivar("Eliminado por administrador");
+        productoRepository.save(p);
+    }
+    
+    // ===================== DESACTIVAR PRODUCTO =====================
+    @Override
+    @Transactional
+    public ProductoResponse desactivarProducto(Integer id, String motivo) {
+        Producto p = productoRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Producto no encontrado"));
+        
+        p.desactivar(motivo);
+        productoRepository.save(p);
+        return convertir(p);
+    }
+    
+    // ===================== REACTIVAR PRODUCTO =====================
+    @Override
+    @Transactional
+    public ProductoResponse reactivarProducto(Integer id) {
+        Producto p = productoRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Producto no encontrado"));
+        
+        p.reactivar();
         productoRepository.save(p);
         return convertir(p);
     }
 
     private void asignarDatos(Producto p, ProductoRequest r) {
-
         Subcategoria sub = subcategoriaRepository.findById(r.getIdSubcategoria())
                 .orElseThrow(() -> new RuntimeException("Subcategoría no existe"));
 
@@ -66,67 +126,171 @@ public class ProductoServiceImpl implements ProductoService {
         p.setDescripcionProducto(r.getDescripcionProducto());
         p.setPrecioProducto(r.getPrecioProducto());
         p.setStockProducto(r.getStockProducto());
-
-        // ========== 🚨 NUEVO: UNIDAD ==========
-        p.setUnidad(r.getUnidad()); // kg - unidad - litro - libra - caja
+        p.setUnidad(r.getUnidad());
+        p.setUltimaActualizacion(LocalDateTime.now());
 
         if (r.getIdVendedor() != null) {
             Vendedor v = vendedorRepository.findById(r.getIdVendedor())
                     .orElseThrow(() -> new RuntimeException("Vendedor no existe"));
             p.setVendedor(v);
-
         } else if (r.getIdUsuario() != null) {
             Usuario u = usuarioRepository.findById(r.getIdUsuario())
                     .orElseThrow(() -> new RuntimeException("Usuario no existe"));
-
             Vendedor v = vendedorRepository.findByUsuario(u)
                     .orElseThrow(() -> new RuntimeException("El usuario no es vendedor"));
-
             p.setVendedor(v);
         }
-
     }
 
- // ================== 🔥 OPCIÓN A — IMAGEN COMO URL ==================
+    // ================== GUARDAR IMAGEN ==================
     private void guardarImagen(ProductoRequest r, Producto p) {
-
-        // Si la imagen llega como URL desde Postman/React
         if (r.getImagenProducto() != null && !r.getImagenProducto().isEmpty()) {
             p.setImagenProducto(r.getImagenProducto());
         }
     }
 
-
     // ================= CONSULTAS =================
     @Override
+    @Transactional(readOnly = true)
     public ProductoResponse obtenerPorId(Integer id) {
-        return productoRepository.findById(id)
-                .map(this::convertir)
+        Producto p = productoRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("❌ Producto no encontrado con id " + id));
+        
+        // Para frontend público, solo devolver si está activo
+        if (!p.estaActivo()) {
+            throw new RuntimeException("Producto no disponible");
+        }
+        
+        return convertir(p);
     }
 
-    @Override public void eliminarProducto(Integer id) { productoRepository.deleteById(id); }
-    @Override public List<ProductoResponse> listarPorVendedor(Integer id) {
-        return productoRepository.findByVendedor(vendedorRepository.findById(id).orElseThrow())
-               .stream().map(this::convertir).collect(Collectors.toList());
+    @Override
+    @Transactional(readOnly = true)
+    public List<ProductoResponse> listarPorVendedor(Integer id) {
+        Vendedor vendedor = vendedorRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Vendedor no encontrado"));
+        
+        return productoRepository.findByVendedor(vendedor).stream()
+                .filter(Producto::estaActivo) // Solo activos
+                .map(this::convertir)
+                .collect(Collectors.toList());
     }
-    @Override public List<ProductoResponse> listarPorSubcategoria(Integer id) {
-        return productoRepository.findBySubcategoria(subcategoriaRepository.findById(id).orElseThrow())
-               .stream().map(this::convertir).collect(Collectors.toList());
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ProductoResponse> listarPorSubcategoria(Integer id) {
+        Subcategoria subcategoria = subcategoriaRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Subcategoría no encontrada"));
+        
+        return productoRepository.findBySubcategoria(subcategoria).stream()
+                .filter(Producto::estaActivo) // Solo activos
+                .map(this::convertir)
+                .collect(Collectors.toList());
     }
-    @Override public List<ProductoResponse> listarTodos() {
-        return productoRepository.findAll().stream().map(this::convertir).collect(Collectors.toList());
+
+    // ================= LISTAR TODOS (PARA ADMIN) =================
+    @Override
+    @Transactional(readOnly = true)
+    public List<ProductoResponse> listarTodos() {
+        return productoRepository.findAll().stream()
+                .map(this::convertir)
+                .collect(Collectors.toList());
     }
-    @Override public ProductoResponse cambiarEstado(Integer id, String estado) {
-        Producto p=productoRepository.findById(id).orElseThrow();
-        p.setEstado(estado); productoRepository.save(p);
+    
+    // ================= LISTAR ACTIVOS (PARA EXPLORAR) =================
+    @Override
+    @Transactional(readOnly = true)
+    public List<ProductoResponse> listarActivos() {
+        return productoRepository.findAll().stream()
+                .filter(Producto::estaActivo)
+                .map(this::convertir)
+                .collect(Collectors.toList());
+    }
+    
+    // ================= LISTAR INACTIVOS =================
+    @Override
+    @Transactional(readOnly = true)
+    public List<ProductoResponse> listarInactivos() {
+        return productoRepository.findAll().stream()
+                .filter(p -> !p.estaActivo())
+                .map(this::convertir)
+                .collect(Collectors.toList());
+    }
+    
+    // ================= LISTAR PARA ADMIN (CON DATOS COMPLETOS) =================
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> listarTodosParaAdmin() {
+        return productoRepository.findAll().stream().map(p -> {
+            Map<String, Object> map = new HashMap<>();
+            
+            map.put("idProducto", p.getIdProducto());
+            map.put("nombreProducto", p.getNombreProducto());
+            map.put("descripcionProducto", p.getDescripcionProducto());
+            map.put("precioProducto", p.getPrecioProducto());
+            map.put("stockProducto", p.getStockProducto());
+            map.put("unidad", p.getUnidad());
+            map.put("imagenProducto", p.getImagenProducto());
+            map.put("estado", p.getEstado());
+            map.put("activo", p.getActivo());
+            map.put("fechaDesactivacion", p.getFechaDesactivacion());
+            map.put("motivoDesactivacion", p.getMotivoDesactivacion());
+            map.put("ultimaActualizacion", p.getUltimaActualizacion());
+            map.put("fechaPublicacion", p.getFechaPublicacion());
+            
+            // Datos de subcategoría
+            if (p.getSubcategoria() != null) {
+                map.put("idSubcategoria", p.getSubcategoria().getIdSubcategoria());
+                map.put("nombreSubcategoria", p.getSubcategoria().getNombreSubcategoria());
+                
+                // Datos de categoría
+                if (p.getSubcategoria().getCategoria() != null) {
+                    map.put("idCategoria", p.getSubcategoria().getCategoria().getIdCategoria());
+                    map.put("nombreCategoria", p.getSubcategoria().getCategoria().getNombreCategoria());
+                }
+            }
+            
+            // Datos de vendedor
+            if (p.getVendedor() != null) {
+                map.put("idVendedor", p.getVendedor().getIdVendedor());
+                map.put("nombreEmpresa", p.getVendedor().getNombreEmpresa());
+            }
+            
+            // URL completa de imagen
+            if (p.getImagenProducto() != null && !p.getImagenProducto().isEmpty()) {
+                if (p.getImagenProducto().startsWith("http")) {
+                    map.put("imagenUrl", p.getImagenProducto());
+                } else {
+                    map.put("imagenUrl", "http://localhost:8080/uploads/" + p.getImagenProducto());
+                }
+            } else {
+                map.put("imagenUrl", null);
+            }
+            
+            return map;
+        }).collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional
+    public ProductoResponse cambiarEstado(Integer id, String estado) {
+        Producto p = productoRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Producto no encontrado"));
+        
+        // Solo permitir cambiar estado si está activo
+        if (!p.estaActivo()) {
+            throw new RuntimeException("No se puede cambiar estado de producto inactivo");
+        }
+        
+        p.setEstado(estado);
+        p.setUltimaActualizacion(LocalDateTime.now());
+        productoRepository.save(p);
         return convertir(p);
     }
 
     // ================= DETALLE COMPLETO =================
     @Override
+    @Transactional(readOnly = true)
     public ProductoDetalleResponse obtenerDetalleProducto(Integer idProducto) {
-
         Producto p = productoRepository.findById(idProducto)
                 .orElseThrow(() -> new RuntimeException("Producto no encontrado"));
 
@@ -141,35 +305,37 @@ public class ProductoServiceImpl implements ProductoService {
         r.setImagenProducto(p.getImagenProducto());
         r.setFechaPublicacion(p.getFechaPublicacion());
         r.setEstado(p.getEstado());
-        r.setUnidad(p.getUnidad()); // ⚠ envío a frontend
+        r.setUnidad(p.getUnidad());
+        r.setActivo(p.getActivo()); // ✅ Nuevo campo
+        r.setFechaDesactivacion(p.getFechaDesactivacion()); // ✅ Nuevo campo
+        r.setMotivoDesactivacion(p.getMotivoDesactivacion()); // ✅ Nuevo campo
 
         // SUBCATEGORÍA + CATEGORÍA
-        if (p.getSubcategoria()!=null) {
+        if (p.getSubcategoria() != null) {
             r.setIdSubcategoria(p.getSubcategoria().getIdSubcategoria());
             r.setNombreSubcategoria(p.getSubcategoria().getNombreSubcategoria());
 
-            if (p.getSubcategoria().getCategoria()!=null){
+            if (p.getSubcategoria().getCategoria() != null){
                 r.setIdCategoria(p.getSubcategoria().getCategoria().getIdCategoria());
                 r.setNombreCategoria(p.getSubcategoria().getCategoria().getNombreCategoria());
             }
         }
 
         // VENDEDOR
-        if (p.getVendedor()!=null){
+        if (p.getVendedor() != null){
             r.setIdVendedor(p.getVendedor().getIdVendedor());
             r.setNombreEmpresa(p.getVendedor().getNombreEmpresa());
 
-            if(p.getVendedor().getUsuario()!=null){
+            if(p.getVendedor().getUsuario() != null){
                 r.setNombreVendedor(
-                        p.getVendedor().getUsuario().getNombre()+" "+
+                        p.getVendedor().getUsuario().getNombre() + " " +
                         p.getVendedor().getUsuario().getApellido()
                 );
             }
         }
 
         // VALORACIONES
-        if(p.getValoraciones()!=null && !p.getValoraciones().isEmpty()){
-
+        if(p.getValoraciones() != null && !p.getValoraciones().isEmpty()){
             r.setPromedioValoracion(
                     p.getValoraciones().stream()
                             .mapToDouble(v -> v.getCalificacion())
@@ -185,15 +351,14 @@ public class ProductoServiceImpl implements ProductoService {
                         vr.setComentario(v.getComentario());
                         vr.setFechaValoracion(v.getFechaValoracion());
 
-                        if(v.getConsumidor()!=null && v.getConsumidor().getUsuario()!=null){
+                        if(v.getConsumidor() != null && v.getConsumidor().getUsuario() != null){
                             vr.setIdConsumidor(v.getConsumidor().getIdConsumidor());
-                            vr.setNombreConsumidor(v.getConsumidor().getUsuario().getNombre()+" "+
+                            vr.setNombreConsumidor(v.getConsumidor().getUsuario().getNombre() + " " +
                                                   v.getConsumidor().getUsuario().getApellido());
                         }
                         return vr;
                     }).toList()
             );
-
         } else {
             r.setPromedioValoracion(0.0);
             r.setTotalValoraciones(0);
@@ -204,7 +369,6 @@ public class ProductoServiceImpl implements ProductoService {
     }
 
     // ================= CONVERTIR RESPONSE GENERAL =================
-    
     private ProductoResponse convertir(Producto p) {
         ProductoResponse r = new ProductoResponse();
 
@@ -217,6 +381,12 @@ public class ProductoServiceImpl implements ProductoService {
         r.setImagenProducto(p.getImagenProducto());
         r.setFechaPublicacion(p.getFechaPublicacion());
         r.setEstado(p.getEstado());
+        
+        // ✅ CAMPOS DE BORRADO LÓGICO
+        r.setActivo(p.getActivo());
+        r.setFechaDesactivacion(p.getFechaDesactivacion());
+        r.setMotivoDesactivacion(p.getMotivoDesactivacion());
+        r.setUltimaActualizacion(p.getUltimaActualizacion());
 
         // SUBCATEGORÍA
         if (p.getSubcategoria() != null) {
@@ -235,9 +405,8 @@ public class ProductoServiceImpl implements ProductoService {
             r.setNombreEmpresa(p.getVendedor().getNombreEmpresa());
         }
 
-        // ⭐ VALORACIONES (PROMEDIO + TOTAL)
+        // VALORACIONES (PROMEDIO + TOTAL)
         if (p.getValoraciones() != null && !p.getValoraciones().isEmpty()) {
-
             double promedio = p.getValoraciones()
                     .stream()
                     .mapToDouble(v -> v.getCalificacion())
@@ -246,7 +415,6 @@ public class ProductoServiceImpl implements ProductoService {
 
             r.setPromedioValoracion(promedio);
             r.setTotalValoraciones(p.getValoraciones().size());
-
         } else {
             r.setPromedioValoracion(0.0);
             r.setTotalValoraciones(0);
@@ -255,17 +423,16 @@ public class ProductoServiceImpl implements ProductoService {
         return r;
     }
 
-    
-    
     // ================= OBTENER LOS 20 MEJORES TOP =================
     @Override
+    @Transactional(readOnly = true)
     public List<ProductoResponse> listarTop20Mejores() {
-        var pageable = org.springframework.data.domain.PageRequest.of(0, 20);
+        PageRequest pageable = PageRequest.of(0, 20);
 
         return productoRepository.findTop20Mejores(pageable)
                 .stream()
+                .filter(Producto::estaActivo) // Solo activos
                 .map(this::convertir)
                 .collect(Collectors.toList());
     }
-
 }

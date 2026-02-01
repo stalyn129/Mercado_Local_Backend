@@ -17,88 +17,126 @@ import com.mercadolocalia.entities.Vendedor;
 
 public interface ProductoRepository extends JpaRepository<Producto, Integer> {
 
-	// ============================================================
-	// 🔥 CONSULTAS GENERALES
-	// ============================================================
+    // ============================================================
+    // 🔥 MÉTODOS NUEVOS PARA VERIFICAR PRODUCTOS ASOCIADOS
+    // ============================================================
+    
+    // 1. Verificar si hay productos con una categoría específica
+    @Query("SELECT COUNT(p) > 0 FROM Producto p " +
+           "JOIN p.subcategoria sc " +
+           "JOIN sc.categoria c " +
+           "WHERE c.idCategoria = :idCategoria")
+    boolean existsByCategoriaIdCategoria(@Param("idCategoria") Integer idCategoria);
+    
+    // 2. Verificar si hay productos con una subcategoría específica
+    @Query("SELECT COUNT(p) > 0 FROM Producto p " +
+           "WHERE p.subcategoria.idSubcategoria = :idSubcategoria")
+    boolean existsBySubcategoriaIdSubcategoria(@Param("idSubcategoria") Integer idSubcategoria);
+    
+    // 3. Método alternativo si necesitas contar (no solo boolean)
+    @Query("SELECT COUNT(p) FROM Producto p " +
+           "JOIN p.subcategoria sc " +
+           "JOIN sc.categoria c " +
+           "WHERE c.idCategoria = :idCategoria")
+    Long countByCategoriaIdCategoria(@Param("idCategoria") Integer idCategoria);
+    
+    @Query("SELECT COUNT(p) FROM Producto p " +
+           "WHERE p.subcategoria.idSubcategoria = :idSubcategoria")
+    Long countBySubcategoriaIdSubcategoria(@Param("idSubcategoria") Integer idSubcategoria);
+    
+    // 4. Obtener productos por categoría (para debug o información)
+    @Query("SELECT p FROM Producto p " +
+           "JOIN p.subcategoria sc " +
+           "JOIN sc.categoria c " +
+           "WHERE c.idCategoria = :idCategoria")
+    List<Producto> findByCategoriaIdCategoria(@Param("idCategoria") Integer idCategoria);
+    
+    // 5. Obtener productos por subcategoría (para debug o información)
+    List<Producto> findBySubcategoriaIdSubcategoria(Integer idSubcategoria);
+    
+    // 6. Método simplificado - si Producto tuviera relación directa con Categoria
+    // @Query("SELECT COUNT(p) > 0 FROM Producto p WHERE p.categoria.idCategoria = :idCategoria")
+    // boolean existsByCategoriaIdCategoria(@Param("idCategoria") Integer idCategoria);
 
-	List<Producto> findByVendedor(Vendedor vendedor);
+    // ============================================================
+    // 🔥 CONSULTAS GENERALES EXISTENTES (las que ya tienes)
+    // ============================================================
 
-	List<Producto> findBySubcategoria(Subcategoria subcategoria);
+    List<Producto> findByVendedor(Vendedor vendedor);
 
-	List<Producto> findByEstado(String estado);
+    List<Producto> findBySubcategoria(Subcategoria subcategoria);
 
-	Integer countByVendedor(Vendedor vendedor);
+    List<Producto> findByEstado(String estado);
 
-	List<Producto> findBySubcategoria_NombreSubcategoriaContainingIgnoreCase(String nombre);
+    Integer countByVendedor(Vendedor vendedor);
 
-	List<Producto> findByNombreProductoContainingIgnoreCaseOrSubcategoria_NombreSubcategoriaContainingIgnoreCase(
-			String nombre, String subcategoria);
+    List<Producto> findBySubcategoria_NombreSubcategoriaContainingIgnoreCase(String nombre);
 
-	List<Producto> findByNombreProductoContainingIgnoreCaseOrSubcategoria_NombreSubcategoriaContainingIgnoreCaseOrSubcategoria_Categoria_NombreCategoriaContainingIgnoreCase(
-			String nombre, String subcategoria, String categoria);
+    List<Producto> findByNombreProductoContainingIgnoreCaseOrSubcategoria_NombreSubcategoriaContainingIgnoreCase(
+            String nombre, String subcategoria);
 
-	@Query("SELECT COUNT(p) FROM Producto p WHERE p.vendedor.idVendedor = :id AND p.estado = 'Disponible'")
-	Integer contarDisponiblesPorVendedor(Integer id);
+    List<Producto> findByNombreProductoContainingIgnoreCaseOrSubcategoria_NombreSubcategoriaContainingIgnoreCaseOrSubcategoria_Categoria_NombreCategoriaContainingIgnoreCase(
+            String nombre, String subcategoria, String categoria);
 
-	// ============================================================
-	// 🔥 TOP 20 MEJORES CALIFICADOS
-	// ============================================================
+    @Query("SELECT COUNT(p) FROM Producto p WHERE p.vendedor.idVendedor = :id AND p.estado = 'Disponible'")
+    Integer contarDisponiblesPorVendedor(Integer id);
 
-	@Query("""
-			    SELECT p
-			    FROM Producto p
-			    LEFT JOIN p.valoraciones v
-			    GROUP BY p.idProducto
-			    ORDER BY AVG(v.calificacion) DESC, COUNT(v) DESC
-			""")
-	List<Producto> findTop20Mejores(Pageable pageable);
+    // ============================================================
+    // 🔥 TOP 20 MEJORES CALIFICADOS
+    // ============================================================
 
-	// ============================================================
-	// 🔥 REPORTE ADMIN — STOCK DE PRODUCTOS
-	// ============================================================
+    @Query("""
+                SELECT p
+                FROM Producto p
+                LEFT JOIN p.valoraciones v
+                GROUP BY p.idProducto
+                ORDER BY AVG(v.calificacion) DESC, COUNT(v) DESC
+            """)
+    List<Producto> findTop20Mejores(Pageable pageable);
 
-	@Query("""
-			    SELECT new map(
-			        p.nombreProducto as producto,
-			        p.stockProducto as stock
-			    )
-			    FROM Producto p
-			""")
-	List<Map<String, Object>> obtenerStockProductos();
+    // ============================================================
+    // 🔥 REPORTE ADMIN — STOCK DE PRODUCTOS
+    // ============================================================
 
-	@Query("""
-			    SELECT new com.mercadolocalia.dto.ProductoPublicDTO(
-			        p.idProducto,
-			        p.nombreProducto,
-			        p.precioProducto,
-			        p.imagenProducto,
-			        s.nombreSubcategoria,
-			        COALESCE(AVG(v.calificacion), 0),
-			        COUNT(v),
-			        p.vendedor.idVendedor
-			    )
-			    FROM Producto p
-			    LEFT JOIN p.subcategoria s
-			    LEFT JOIN p.valoraciones v
-			    WHERE p.vendedor.idVendedor = :idVendedor
-			      AND p.estado = 'Disponible'
-			    GROUP BY p.idProducto, s.nombreSubcategoria, p.vendedor.idVendedor
-			""")
-	List<ProductoPublicDTO> obtenerProductosPublicosPorVendedor(@Param("idVendedor") Integer idVendedor);
+    @Query("""
+                SELECT new map(
+                    p.nombreProducto as producto,
+                    p.stockProducto as stock
+                )
+                FROM Producto p
+            """)
+    List<Map<String, Object>> obtenerStockProductos();
 
-	// ============================================================
-	// 🔥 CORRECCIÓN: Usa fechaPublicacion (LocalDateTime) no fechaCreacion
-	// ============================================================
+    @Query("""
+                SELECT new com.mercadolocalia.dto.ProductoPublicDTO(
+                    p.idProducto,
+                    p.nombreProducto,
+                    p.precioProducto,
+                    p.imagenProducto,
+                    s.nombreSubcategoria,
+                    COALESCE(AVG(v.calificacion), 0),
+                    COUNT(v),
+                    p.vendedor.idVendedor
+                )
+                FROM Producto p
+                LEFT JOIN p.subcategoria s
+                LEFT JOIN p.valoraciones v
+                WHERE p.vendedor.idVendedor = :idVendedor
+                  AND p.estado = 'Disponible'
+                GROUP BY p.idProducto, s.nombreSubcategoria, p.vendedor.idVendedor
+            """)
+    List<ProductoPublicDTO> obtenerProductosPublicosPorVendedor(@Param("idVendedor") Integer idVendedor);
 
-	// Método 1: Usando LocalDateTime (recomendado si tienes fechaPublicacion)
-	Long countByFechaPublicacionBetween(LocalDateTime inicio, LocalDateTime fin);
 
-	// Método 2: Si necesitas LocalDate, crea un método custom
-	@Query("SELECT COUNT(p) FROM Producto p WHERE DATE(p.fechaPublicacion) BETWEEN :inicio AND :fin")
-	Long countByFechaPublicacionDateBetween(@Param("inicio") LocalDate inicio, @Param("fin") LocalDate fin);
+    // Método 1: Usando LocalDateTime (recomendado si tienes fechaPublicacion)
+    Long countByFechaPublicacionBetween(LocalDateTime inicio, LocalDateTime fin);
 
-	// Reportes graficos vendedor
-	// 1. STOCK BAJO
+    // Método 2: Si necesitas LocalDate, crea un método custom
+    @Query("SELECT COUNT(p) FROM Producto p WHERE DATE(p.fechaPublicacion) BETWEEN :inicio AND :fin")
+    Long countByFechaPublicacionDateBetween(@Param("inicio") LocalDate inicio, @Param("fin") LocalDate fin);
+
+    // Reportes graficos vendedor
+    // 1. STOCK BAJO
     @Query("""
         SELECT new map(
             p.nombreProducto as producto,
@@ -149,5 +187,4 @@ public interface ProductoRepository extends JpaRepository<Producto, Integer> {
           )
     """)
     List<Map<String, Object>> obtenerProductosSinVentas(@Param("idVendedor") Integer idVendedor);
-    
 }

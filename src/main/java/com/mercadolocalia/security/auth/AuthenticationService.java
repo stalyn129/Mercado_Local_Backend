@@ -55,29 +55,22 @@ public class AuthenticationService {
     @Autowired
     private VendedorRepository vendedorRepository;
     
-    // ============================================================
     // 🔵 VERIFICAR SI EL EMAIL YA EXISTE (para Google OAuth)
-    // ============================================================
     public boolean checkEmailExists(String email) {
         return usuarioRepository.existsByCorreo(email);
     }
 
-    // ============================================================
     // 🔵 NUEVO MÉTODO: Verificar Token de Google
-    // ============================================================
     public Map<String, Object> verifyGoogleToken(String googleToken) {
         Map<String, Object> response = new HashMap<>();
         
         try {
-            // Por ahora, solo verificamos que no esté vacío
-            // En producción, deberías validar con la API de Google
             boolean isValid = googleToken != null && !googleToken.isEmpty();
             
             response.put("valid", isValid);
             response.put("message", isValid ? "Token válido" : "Token inválido");
             
             if (isValid) {
-                // Opcional: puedes decodificar el token JWT básico aquí
                 response.put("verified", true);
             }
             
@@ -89,9 +82,7 @@ public class AuthenticationService {
         return response;
     }
     
-    // ============================================================
     // 🔵 REGISTRO CON GOOGLE (sin contraseña)
-    // ============================================================
     public AuthResponse registrarConGoogle(RegisterRequest request) {
         
         // Validar que sea un registro con Google
@@ -114,8 +105,17 @@ public class AuthenticationService {
 
         // Crear usuario base con Google Auth
         Usuario usuario = new Usuario();
-        usuario.setNombre(request.getNombre());
-        usuario.setApellido(request.getApellido());
+        String nombreCompleto = (request.getNombre() + " " + request.getApellido()).trim();
+        String[] partes = nombreCompleto.split("\\s+");
+
+        String nombre = partes[0];
+        String apellido = partes.length > 1
+                ? String.join(" ", java.util.Arrays.copyOfRange(partes, 1, partes.length))
+                : "";
+
+        usuario.setNombre(nombre);
+        usuario.setApellido(apellido);
+
         usuario.setCorreo(request.getCorreo());
         
         // Para Google Auth, generamos una contraseña dummy pero segura

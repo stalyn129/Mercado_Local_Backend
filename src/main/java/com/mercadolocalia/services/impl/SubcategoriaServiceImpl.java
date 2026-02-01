@@ -12,6 +12,7 @@ import com.mercadolocalia.entities.Categoria;
 import com.mercadolocalia.entities.Subcategoria;
 import com.mercadolocalia.repositories.CategoriaRepository;
 import com.mercadolocalia.repositories.SubcategoriaRepository;
+import com.mercadolocalia.repositories.ProductoRepository;
 import com.mercadolocalia.services.SubcategoriaService;
 
 @Service
@@ -22,10 +23,12 @@ public class SubcategoriaServiceImpl implements SubcategoriaService {
 
     @Autowired
     private CategoriaRepository categoriaRepository;
+    
+    @Autowired
+    private ProductoRepository productoRepository;
 
     @Override
     public SubcategoriaResponse crearSubcategoria(SubcategoriaRequest request) {
-
         Categoria categoria = categoriaRepository.findById(request.getIdCategoria())
                 .orElseThrow(() -> new RuntimeException("Categoría no encontrada"));
 
@@ -78,7 +81,6 @@ public class SubcategoriaServiceImpl implements SubcategoriaService {
 
     @Override
     public List<SubcategoriaResponse> listarPorCategoria(Integer idCategoria) {
-
         Categoria categoria = categoriaRepository.findById(idCategoria)
                 .orElseThrow(() -> new RuntimeException("Categoría no encontrada"));
 
@@ -86,6 +88,13 @@ public class SubcategoriaServiceImpl implements SubcategoriaService {
                 .stream()
                 .map(this::convertir)
                 .toList();
+    }
+    
+    @Override
+    public boolean tieneProductosAsociados(Integer idSubcategoria) {
+        // Verificar si existe algún producto con esta subcategoría
+        // Asumiendo que Producto tiene una relación directa con Subcategoria
+        return productoRepository.existsBySubcategoriaIdSubcategoria(idSubcategoria);
     }
 
     private SubcategoriaResponse convertir(Subcategoria sub) {
@@ -101,4 +110,3 @@ public class SubcategoriaServiceImpl implements SubcategoriaService {
         return dto;
     }
 }
-
