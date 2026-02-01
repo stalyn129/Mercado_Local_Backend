@@ -24,149 +24,241 @@ import com.mercadolocalia.repositories.SubcategoriaRepository;
 import com.mercadolocalia.repositories.UsuarioRepository;
 import com.mercadolocalia.repositories.VendedorRepository;
 import com.mercadolocalia.services.ProductoService;
+import com.mercadolocalia.services.FileStorageService;
 
 @Service
 public class ProductoServiceImpl implements ProductoService {
 
-    @Autowired private ProductoRepository productoRepository;
-    @Autowired private VendedorRepository vendedorRepository;
-    @Autowired private UsuarioRepository usuarioRepository;
-    @Autowired private SubcategoriaRepository subcategoriaRepository;
+    @Autowired 
+    private ProductoRepository productoRepository;
+    
+    @Autowired 
+    private VendedorRepository vendedorRepository;
+    
+    @Autowired 
+    private UsuarioRepository usuarioRepository;
+    
+    @Autowired 
+    private SubcategoriaRepository subcategoriaRepository;
+    
+    @Autowired 
+    private FileStorageService fileStorageService;
 
-    // ===================== CREAR =====================
+    // ===================== CREAR PRODUCTO =====================
     @Override
     @Transactional
     public ProductoResponse crearProducto(ProductoRequest request) {
-        Producto p = new Producto();
-        asignarDatos(p, request);
-        p.setFechaPublicacion(LocalDateTime.now());
-        p.setEstado("Disponible");
-        p.setActivo(true); // ✅ Por defecto activo
-        p.setUltimaActualizacion(LocalDateTime.now());
-        guardarImagen(request, p);
-        productoRepository.save(p);
-        return convertir(p);
+        System.out.println("🛍️ Creando nuevo producto...");
+        
+        Producto producto = new Producto();
+        asignarDatos(producto, request);
+        producto.setFechaPublicacion(LocalDateTime.now());
+        producto.setEstado("Disponible");
+        producto.setActivo(true);
+        producto.setUltimaActualizacion(LocalDateTime.now());
+        
+        // ✅ VALIDAR Y GUARDAR IMAGEN (URL DE CLOUDINARY)
+        validarYGuardarImagen(request, producto);
+        
+        productoRepository.save(producto);
+        
+        System.out.println("✅ Producto creado exitosamente ID: " + producto.getIdProducto());
+        System.out.println("✅ Imagen URL: " + producto.getImagenProducto());
+        
+        return convertir(producto);
     }
 
-    // ===================== ACTUALIZAR (SOLO NOMBRE Y PRECIO) =====================
+    // ===================== ACTUALIZAR PRODUCTO =====================
     @Override
     @Transactional
     public ProductoResponse actualizarProducto(Integer id, ProductoRequest request) {
-        Producto p = productoRepository.findById(id)
+        System.out.println("✏️ Actualizando producto ID: " + id);
+        
+        Producto producto = productoRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Producto no encontrado con id " + id));
         
         // Verificar que esté activo
-        if (!p.estaActivo()) {
+        if (!producto.estaActivo()) {
             throw new RuntimeException("No se puede actualizar un producto inactivo");
         }
         
-        // ✅ SOLO ACTUALIZAR NOMBRE Y PRECIO
+        // ✅ ACTUALIZAR CAMPOS PERMITIDOS
         if (request.getNombreProducto() != null && !request.getNombreProducto().trim().isEmpty()) {
-            p.setNombreProducto(request.getNombreProducto());
+            producto.setNombreProducto(request.getNombreProducto());
         }
         
         if (request.getPrecioProducto() != null && request.getPrecioProducto() > 0) {
-            p.setPrecioProducto(request.getPrecioProducto());
+            producto.setPrecioProducto(request.getPrecioProducto());
         }
         
-        // ❌ NO permitir cambiar stock, unidad, etc.
-        
-        p.setUltimaActualizacion(LocalDateTime.now());
-        
+        // ✅ ACTUALIZAR IMAGEN SI SE PROPORCIONA NUEVA URL
         if (request.getImagenProducto() != null && !request.getImagenProducto().isEmpty()) {
-            p.setImagenProducto(request.getImagenProducto());
+            validarYGuardarImagen(request, producto);
         }
         
-        productoRepository.save(p);
-        return convertir(p);
+        producto.setUltimaActualizacion(LocalDateTime.now());
+        productoRepository.save(producto);
+        
+        System.out.println("✅ Producto actualizado exitosamente");
+        
+        return convertir(producto);
+    }
+
+    // ===================== VALIDAR Y GUARDAR IMAGEN =====================
+    private void validarYGuardarImagen(ProductoRequest request, Producto producto) {
+        String imagenUrl = request.getImagenProducto();
+        
+        if (imagenUrl == null || imagenUrl.trim().isEmpty()) {
+            System.out.println("⚠️ Producto sin imagen");
+            producto.setImagenProducto(null);
+            return;
+        }
+        
+        System.out.println("📷 Procesando imagen del producto...");
+        System.out.println("   URL recibida: " + (imagenUrl.length() > 100 ? imagenUrl.substring(0, 100) + "..." : imagenUrl));
+        
+        // ✅ VALIDAR QUE SEA URL DE CLOUDINARY
+        if (!esUrlValida(imagenUrl)) {
+            System.err.println("❌ URL de imagen no válida");
+            throw new RuntimeException("URL de imagen no válida. Debe ser una URL de Cloudinary.");
+        }
+        
+        // ✅ VERIFICAR QUE SEA UNA URL DE IMAGEN
+        if (!esUrlDeImagen(imagenUrl)) {
+            System.err.println("❌ No es una URL de imagen");
+            throw new RuntimeException("La URL proporcionada no parece ser una imagen válida.");
+        }
+        
+        // ✅ GUARDAR URL DIRECTAMENTE
+        producto.setImagenProducto(imagenUrl);
+        
+        System.out.println("✅ Imagen validada y guardada");
+    }
+    
+    private boolean esUrlValida(String url) {
+        if (url == null || url.trim().isEmpty()) {
+            return false;
+        }
+        
+        // Aceptar URLs de Cloudinary o cualquier URL HTTP/HTTPS
+        return url.startsWith("http://") || 
+               url.startsWith("https://") ||
+               url.startsWith("https://res.cloudinary.com/");
+    }
+    
+    private boolean esUrlDeImagen(String url) {
+        String urlLower = url.toLowerCase();
+        return urlLower.contains(".jpg") || 
+               urlLower.contains(".jpeg") || 
+               urlLower.contains(".png") || 
+               urlLower.contains(".gif") || 
+               urlLower.contains(".webp") ||
+               urlLower.contains("image/upload");
+    }
+
+    // ===================== ASIGNAR DATOS DEL PRODUCTO =====================
+    private void asignarDatos(Producto producto, ProductoRequest request) {
+        // ✅ VALIDAR Y OBTENER SUBCATEGORÍA
+        Subcategoria subcategoria = subcategoriaRepository.findById(request.getIdSubcategoria())
+                .orElseThrow(() -> new RuntimeException("Subcategoría no existe"));
+        
+        producto.setSubcategoria(subcategoria);
+        producto.setNombreProducto(request.getNombreProducto());
+        producto.setDescripcionProducto(request.getDescripcionProducto());
+        producto.setPrecioProducto(request.getPrecioProducto());
+        producto.setStockProducto(request.getStockProducto());
+        producto.setUnidad(request.getUnidad());
+        producto.setUltimaActualizacion(LocalDateTime.now());
+
+        // ✅ OBTENER VENDEDOR
+        if (request.getIdVendedor() != null) {
+            Vendedor vendedor = vendedorRepository.findById(request.getIdVendedor())
+                    .orElseThrow(() -> new RuntimeException("Vendedor no existe"));
+            producto.setVendedor(vendedor);
+        } else if (request.getIdUsuario() != null) {
+            Usuario usuario = usuarioRepository.findById(request.getIdUsuario())
+                    .orElseThrow(() -> new RuntimeException("Usuario no existe"));
+            Vendedor vendedor = vendedorRepository.findByUsuario(usuario)
+                    .orElseThrow(() -> new RuntimeException("El usuario no es vendedor"));
+            producto.setVendedor(vendedor);
+        } else {
+            throw new RuntimeException("Debe proporcionar idVendedor o idUsuario");
+        }
     }
 
     // ===================== BORRADO LÓGICO - ELIMINAR =====================
     @Override
     @Transactional
     public void eliminarProducto(Integer id) {
-        Producto p = productoRepository.findById(id)
+        System.out.println("🗑️ Eliminando (desactivando) producto ID: " + id);
+        
+        Producto producto = productoRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Producto no encontrado"));
         
         // BORRADO LÓGICO - Desactivar en lugar de eliminar
-        p.desactivar("Eliminado por administrador");
-        productoRepository.save(p);
+        producto.desactivar("Eliminado por administrador");
+        productoRepository.save(producto);
+        
+        System.out.println("✅ Producto desactivado exitosamente");
     }
     
     // ===================== DESACTIVAR PRODUCTO =====================
     @Override
     @Transactional
     public ProductoResponse desactivarProducto(Integer id, String motivo) {
-        Producto p = productoRepository.findById(id)
+        System.out.println("🔒 Desactivando producto ID: " + id + " - Motivo: " + motivo);
+        
+        Producto producto = productoRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Producto no encontrado"));
         
-        p.desactivar(motivo);
-        productoRepository.save(p);
-        return convertir(p);
+        producto.desactivar(motivo);
+        productoRepository.save(producto);
+        
+        System.out.println("✅ Producto desactivado");
+        
+        return convertir(producto);
     }
     
     // ===================== REACTIVAR PRODUCTO =====================
     @Override
     @Transactional
     public ProductoResponse reactivarProducto(Integer id) {
-        Producto p = productoRepository.findById(id)
+        System.out.println("🔓 Reactivando producto ID: " + id);
+        
+        Producto producto = productoRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Producto no encontrado"));
         
-        p.reactivar();
-        productoRepository.save(p);
-        return convertir(p);
+        producto.reactivar();
+        productoRepository.save(producto);
+        
+        System.out.println("✅ Producto reactivado");
+        
+        return convertir(producto);
     }
 
-    private void asignarDatos(Producto p, ProductoRequest r) {
-        Subcategoria sub = subcategoriaRepository.findById(r.getIdSubcategoria())
-                .orElseThrow(() -> new RuntimeException("Subcategoría no existe"));
-
-        p.setSubcategoria(sub);
-        p.setNombreProducto(r.getNombreProducto());
-        p.setDescripcionProducto(r.getDescripcionProducto());
-        p.setPrecioProducto(r.getPrecioProducto());
-        p.setStockProducto(r.getStockProducto());
-        p.setUnidad(r.getUnidad());
-        p.setUltimaActualizacion(LocalDateTime.now());
-
-        if (r.getIdVendedor() != null) {
-            Vendedor v = vendedorRepository.findById(r.getIdVendedor())
-                    .orElseThrow(() -> new RuntimeException("Vendedor no existe"));
-            p.setVendedor(v);
-        } else if (r.getIdUsuario() != null) {
-            Usuario u = usuarioRepository.findById(r.getIdUsuario())
-                    .orElseThrow(() -> new RuntimeException("Usuario no existe"));
-            Vendedor v = vendedorRepository.findByUsuario(u)
-                    .orElseThrow(() -> new RuntimeException("El usuario no es vendedor"));
-            p.setVendedor(v);
-        }
-    }
-
-    // ================== GUARDAR IMAGEN ==================
-    private void guardarImagen(ProductoRequest r, Producto p) {
-        if (r.getImagenProducto() != null && !r.getImagenProducto().isEmpty()) {
-            p.setImagenProducto(r.getImagenProducto());
-        }
-    }
-
-    // ================= CONSULTAS =================
+    // ===================== OBTENER POR ID =====================
     @Override
     @Transactional(readOnly = true)
     public ProductoResponse obtenerPorId(Integer id) {
-        Producto p = productoRepository.findById(id)
+        System.out.println("🔍 Obteniendo producto ID: " + id);
+        
+        Producto producto = productoRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("❌ Producto no encontrado con id " + id));
         
         // Para frontend público, solo devolver si está activo
-        if (!p.estaActivo()) {
+        if (!producto.estaActivo()) {
             throw new RuntimeException("Producto no disponible");
         }
         
-        return convertir(p);
+        return convertir(producto);
     }
 
+    // ===================== LISTAR POR VENDEDOR =====================
     @Override
     @Transactional(readOnly = true)
     public List<ProductoResponse> listarPorVendedor(Integer id) {
+        System.out.println("📋 Listando productos del vendedor ID: " + id);
+        
         Vendedor vendedor = vendedorRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Vendedor no encontrado"));
         
@@ -176,9 +268,12 @@ public class ProductoServiceImpl implements ProductoService {
                 .collect(Collectors.toList());
     }
 
+    // ===================== LISTAR POR SUBCATEGORÍA =====================
     @Override
     @Transactional(readOnly = true)
     public List<ProductoResponse> listarPorSubcategoria(Integer id) {
+        System.out.println("📋 Listando productos de subcategoría ID: " + id);
+        
         Subcategoria subcategoria = subcategoriaRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Subcategoría no encontrada"));
         
@@ -188,163 +283,124 @@ public class ProductoServiceImpl implements ProductoService {
                 .collect(Collectors.toList());
     }
 
-    // ================= LISTAR TODOS (PARA ADMIN) =================
+    // ===================== LISTAR TODOS (PARA ADMIN) =====================
     @Override
     @Transactional(readOnly = true)
     public List<ProductoResponse> listarTodos() {
+        System.out.println("📋 Listando todos los productos (admin)");
+        
         return productoRepository.findAll().stream()
                 .map(this::convertir)
                 .collect(Collectors.toList());
     }
     
-    // ================= LISTAR ACTIVOS (PARA EXPLORAR) =================
+    // ===================== LISTAR ACTIVOS (PARA EXPLORAR) =====================
     @Override
     @Transactional(readOnly = true)
     public List<ProductoResponse> listarActivos() {
+        System.out.println("📋 Listando productos activos");
+        
         return productoRepository.findAll().stream()
                 .filter(Producto::estaActivo)
                 .map(this::convertir)
                 .collect(Collectors.toList());
     }
     
-    // ================= LISTAR INACTIVOS =================
+    // ===================== LISTAR INACTIVOS =====================
     @Override
     @Transactional(readOnly = true)
     public List<ProductoResponse> listarInactivos() {
+        System.out.println("📋 Listando productos inactivos");
+        
         return productoRepository.findAll().stream()
                 .filter(p -> !p.estaActivo())
                 .map(this::convertir)
                 .collect(Collectors.toList());
     }
-    
-    // ================= LISTAR PARA ADMIN (CON DATOS COMPLETOS) =================
-    @Transactional(readOnly = true)
-    public List<Map<String, Object>> listarTodosParaAdmin() {
-        return productoRepository.findAll().stream().map(p -> {
-            Map<String, Object> map = new HashMap<>();
-            
-            map.put("idProducto", p.getIdProducto());
-            map.put("nombreProducto", p.getNombreProducto());
-            map.put("descripcionProducto", p.getDescripcionProducto());
-            map.put("precioProducto", p.getPrecioProducto());
-            map.put("stockProducto", p.getStockProducto());
-            map.put("unidad", p.getUnidad());
-            map.put("imagenProducto", p.getImagenProducto());
-            map.put("estado", p.getEstado());
-            map.put("activo", p.getActivo());
-            map.put("fechaDesactivacion", p.getFechaDesactivacion());
-            map.put("motivoDesactivacion", p.getMotivoDesactivacion());
-            map.put("ultimaActualizacion", p.getUltimaActualizacion());
-            map.put("fechaPublicacion", p.getFechaPublicacion());
-            
-            // Datos de subcategoría
-            if (p.getSubcategoria() != null) {
-                map.put("idSubcategoria", p.getSubcategoria().getIdSubcategoria());
-                map.put("nombreSubcategoria", p.getSubcategoria().getNombreSubcategoria());
-                
-                // Datos de categoría
-                if (p.getSubcategoria().getCategoria() != null) {
-                    map.put("idCategoria", p.getSubcategoria().getCategoria().getIdCategoria());
-                    map.put("nombreCategoria", p.getSubcategoria().getCategoria().getNombreCategoria());
-                }
-            }
-            
-            // Datos de vendedor
-            if (p.getVendedor() != null) {
-                map.put("idVendedor", p.getVendedor().getIdVendedor());
-                map.put("nombreEmpresa", p.getVendedor().getNombreEmpresa());
-            }
-            
-            // URL completa de imagen
-            if (p.getImagenProducto() != null && !p.getImagenProducto().isEmpty()) {
-                if (p.getImagenProducto().startsWith("http")) {
-                    map.put("imagenUrl", p.getImagenProducto());
-                } else {
-                    map.put("imagenUrl", "http://localhost:8080/uploads/" + p.getImagenProducto());
-                }
-            } else {
-                map.put("imagenUrl", null);
-            }
-            
-            return map;
-        }).collect(Collectors.toList());
-    }
 
+    // ===================== CAMBIAR ESTADO =====================
     @Override
     @Transactional
     public ProductoResponse cambiarEstado(Integer id, String estado) {
-        Producto p = productoRepository.findById(id)
+        System.out.println("🔄 Cambiando estado del producto ID: " + id + " a: " + estado);
+        
+        Producto producto = productoRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Producto no encontrado"));
         
         // Solo permitir cambiar estado si está activo
-        if (!p.estaActivo()) {
+        if (!producto.estaActivo()) {
             throw new RuntimeException("No se puede cambiar estado de producto inactivo");
         }
         
-        p.setEstado(estado);
-        p.setUltimaActualizacion(LocalDateTime.now());
-        productoRepository.save(p);
-        return convertir(p);
+        producto.setEstado(estado);
+        producto.setUltimaActualizacion(LocalDateTime.now());
+        productoRepository.save(producto);
+        
+        System.out.println("✅ Estado actualizado");
+        
+        return convertir(producto);
     }
 
-    // ================= DETALLE COMPLETO =================
+    // ===================== DETALLE COMPLETO =====================
     @Override
     @Transactional(readOnly = true)
     public ProductoDetalleResponse obtenerDetalleProducto(Integer idProducto) {
-        Producto p = productoRepository.findById(idProducto)
+        System.out.println("🔍 Obteniendo detalle completo del producto ID: " + idProducto);
+        
+        Producto producto = productoRepository.findById(idProducto)
                 .orElseThrow(() -> new RuntimeException("Producto no encontrado"));
 
-        ProductoDetalleResponse r = new ProductoDetalleResponse();
+        ProductoDetalleResponse response = new ProductoDetalleResponse();
 
         // BÁSICO
-        r.setIdProducto(p.getIdProducto());
-        r.setNombreProducto(p.getNombreProducto());
-        r.setDescripcionProducto(p.getDescripcionProducto());
-        r.setPrecioProducto(p.getPrecioProducto());
-        r.setStockProducto(p.getStockProducto());
-        r.setImagenProducto(p.getImagenProducto());
-        r.setFechaPublicacion(p.getFechaPublicacion());
-        r.setEstado(p.getEstado());
-        r.setUnidad(p.getUnidad());
-        r.setActivo(p.getActivo()); // ✅ Nuevo campo
-        r.setFechaDesactivacion(p.getFechaDesactivacion()); // ✅ Nuevo campo
-        r.setMotivoDesactivacion(p.getMotivoDesactivacion()); // ✅ Nuevo campo
+        response.setIdProducto(producto.getIdProducto());
+        response.setNombreProducto(producto.getNombreProducto());
+        response.setDescripcionProducto(producto.getDescripcionProducto());
+        response.setPrecioProducto(producto.getPrecioProducto());
+        response.setStockProducto(producto.getStockProducto());
+        response.setImagenProducto(producto.getImagenProducto());
+        response.setFechaPublicacion(producto.getFechaPublicacion());
+        response.setEstado(producto.getEstado());
+        response.setUnidad(producto.getUnidad());
+        response.setActivo(producto.getActivo());
+        response.setFechaDesactivacion(producto.getFechaDesactivacion());
+        response.setMotivoDesactivacion(producto.getMotivoDesactivacion());
 
         // SUBCATEGORÍA + CATEGORÍA
-        if (p.getSubcategoria() != null) {
-            r.setIdSubcategoria(p.getSubcategoria().getIdSubcategoria());
-            r.setNombreSubcategoria(p.getSubcategoria().getNombreSubcategoria());
+        if (producto.getSubcategoria() != null) {
+            response.setIdSubcategoria(producto.getSubcategoria().getIdSubcategoria());
+            response.setNombreSubcategoria(producto.getSubcategoria().getNombreSubcategoria());
 
-            if (p.getSubcategoria().getCategoria() != null){
-                r.setIdCategoria(p.getSubcategoria().getCategoria().getIdCategoria());
-                r.setNombreCategoria(p.getSubcategoria().getCategoria().getNombreCategoria());
+            if (producto.getSubcategoria().getCategoria() != null){
+                response.setIdCategoria(producto.getSubcategoria().getCategoria().getIdCategoria());
+                response.setNombreCategoria(producto.getSubcategoria().getCategoria().getNombreCategoria());
             }
         }
 
         // VENDEDOR
-        if (p.getVendedor() != null){
-            r.setIdVendedor(p.getVendedor().getIdVendedor());
-            r.setNombreEmpresa(p.getVendedor().getNombreEmpresa());
+        if (producto.getVendedor() != null){
+            response.setIdVendedor(producto.getVendedor().getIdVendedor());
+            response.setNombreEmpresa(producto.getVendedor().getNombreEmpresa());
 
-            if(p.getVendedor().getUsuario() != null){
-                r.setNombreVendedor(
-                        p.getVendedor().getUsuario().getNombre() + " " +
-                        p.getVendedor().getUsuario().getApellido()
+            if(producto.getVendedor().getUsuario() != null){
+                response.setNombreVendedor(
+                        producto.getVendedor().getUsuario().getNombre() + " " +
+                        producto.getVendedor().getUsuario().getApellido()
                 );
             }
         }
 
         // VALORACIONES
-        if(p.getValoraciones() != null && !p.getValoraciones().isEmpty()){
-            r.setPromedioValoracion(
-                    p.getValoraciones().stream()
+        if(producto.getValoraciones() != null && !producto.getValoraciones().isEmpty()){
+            response.setPromedioValoracion(
+                    producto.getValoraciones().stream()
                             .mapToDouble(v -> v.getCalificacion())
                             .average().orElse(0.0));
 
-            r.setTotalValoraciones(p.getValoraciones().size());
+            response.setTotalValoraciones(producto.getValoraciones().size());
 
-            r.setValoraciones(
-                    p.getValoraciones().stream().map(v -> {
+            response.setValoraciones(
+                    producto.getValoraciones().stream().map(v -> {
                         ValoracionResponse vr = new ValoracionResponse();
                         vr.setIdValoracion(v.getIdValoracion());
                         vr.setCalificacion(v.getCalificacion());
@@ -360,73 +416,77 @@ public class ProductoServiceImpl implements ProductoService {
                     }).toList()
             );
         } else {
-            r.setPromedioValoracion(0.0);
-            r.setTotalValoraciones(0);
-            r.setValoraciones(List.of());
+            response.setPromedioValoracion(0.0);
+            response.setTotalValoraciones(0);
+            response.setValoraciones(List.of());
         }
 
-        return r;
+        System.out.println("✅ Detalle obtenido exitosamente");
+        
+        return response;
     }
 
-    // ================= CONVERTIR RESPONSE GENERAL =================
-    private ProductoResponse convertir(Producto p) {
-        ProductoResponse r = new ProductoResponse();
+    // ===================== CONVERTIR A RESPONSE =====================
+    private ProductoResponse convertir(Producto producto) {
+        ProductoResponse response = new ProductoResponse();
 
-        r.setIdProducto(p.getIdProducto());
-        r.setNombreProducto(p.getNombreProducto());
-        r.setDescripcionProducto(p.getDescripcionProducto());
-        r.setPrecioProducto(p.getPrecioProducto());
-        r.setStockProducto(p.getStockProducto());
-        r.setUnidad(p.getUnidad());
-        r.setImagenProducto(p.getImagenProducto());
-        r.setFechaPublicacion(p.getFechaPublicacion());
-        r.setEstado(p.getEstado());
+        response.setIdProducto(producto.getIdProducto());
+        response.setNombreProducto(producto.getNombreProducto());
+        response.setDescripcionProducto(producto.getDescripcionProducto());
+        response.setPrecioProducto(producto.getPrecioProducto());
+        response.setStockProducto(producto.getStockProducto());
+        response.setUnidad(producto.getUnidad());
+        response.setImagenProducto(producto.getImagenProducto());
+        response.setFechaPublicacion(producto.getFechaPublicacion());
+        response.setEstado(producto.getEstado());
         
         // ✅ CAMPOS DE BORRADO LÓGICO
-        r.setActivo(p.getActivo());
-        r.setFechaDesactivacion(p.getFechaDesactivacion());
-        r.setMotivoDesactivacion(p.getMotivoDesactivacion());
-        r.setUltimaActualizacion(p.getUltimaActualizacion());
+        response.setActivo(producto.getActivo());
+        response.setFechaDesactivacion(producto.getFechaDesactivacion());
+        response.setMotivoDesactivacion(producto.getMotivoDesactivacion());
+        response.setUltimaActualizacion(producto.getUltimaActualizacion());
 
         // SUBCATEGORÍA
-        if (p.getSubcategoria() != null) {
-            r.setIdSubcategoria(p.getSubcategoria().getIdSubcategoria());
-            r.setNombreSubcategoria(p.getSubcategoria().getNombreSubcategoria());
+        if (producto.getSubcategoria() != null) {
+            response.setIdSubcategoria(producto.getSubcategoria().getIdSubcategoria());
+            response.setNombreSubcategoria(producto.getSubcategoria().getNombreSubcategoria());
 
-            if (p.getSubcategoria().getCategoria() != null) {
-                r.setIdCategoria(p.getSubcategoria().getCategoria().getIdCategoria());
-                r.setNombreCategoria(p.getSubcategoria().getCategoria().getNombreCategoria());
+            if (producto.getSubcategoria().getCategoria() != null) {
+                response.setIdCategoria(producto.getSubcategoria().getCategoria().getIdCategoria());
+                response.setNombreCategoria(producto.getSubcategoria().getCategoria().getNombreCategoria());
             }
         }
 
         // VENDEDOR
-        if (p.getVendedor() != null) {
-            r.setIdVendedor(p.getVendedor().getIdVendedor());
-            r.setNombreEmpresa(p.getVendedor().getNombreEmpresa());
+        if (producto.getVendedor() != null) {
+            response.setIdVendedor(producto.getVendedor().getIdVendedor());
+            response.setNombreEmpresa(producto.getVendedor().getNombreEmpresa());
         }
 
         // VALORACIONES (PROMEDIO + TOTAL)
-        if (p.getValoraciones() != null && !p.getValoraciones().isEmpty()) {
-            double promedio = p.getValoraciones()
+        if (producto.getValoraciones() != null && !producto.getValoraciones().isEmpty()) {
+            double promedio = producto.getValoraciones()
                     .stream()
                     .mapToDouble(v -> v.getCalificacion())
                     .average()
                     .orElse(0.0);
 
-            r.setPromedioValoracion(promedio);
-            r.setTotalValoraciones(p.getValoraciones().size());
+            response.setPromedioValoracion(promedio);
+            response.setTotalValoraciones(producto.getValoraciones().size());
         } else {
-            r.setPromedioValoracion(0.0);
-            r.setTotalValoraciones(0);
+            response.setPromedioValoracion(0.0);
+            response.setTotalValoraciones(0);
         }
 
-        return r;
+        return response;
     }
 
-    // ================= OBTENER LOS 20 MEJORES TOP =================
+    // ===================== TOP 20 MEJORES PRODUCTOS =====================
     @Override
     @Transactional(readOnly = true)
     public List<ProductoResponse> listarTop20Mejores() {
+        System.out.println("🏆 Obteniendo top 20 mejores productos");
+        
         PageRequest pageable = PageRequest.of(0, 20);
 
         return productoRepository.findTop20Mejores(pageable)
@@ -434,5 +494,52 @@ public class ProductoServiceImpl implements ProductoService {
                 .filter(Producto::estaActivo) // Solo activos
                 .map(this::convertir)
                 .collect(Collectors.toList());
+    }
+
+    // ===================== LISTAR PARA ADMIN =====================
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> listarTodosParaAdmin() {
+        System.out.println("📋 Listando todos los productos para admin");
+        
+        return productoRepository.findAll().stream().map(producto -> {
+            Map<String, Object> map = new HashMap<>();
+            
+            map.put("idProducto", producto.getIdProducto());
+            map.put("nombreProducto", producto.getNombreProducto());
+            map.put("descripcionProducto", producto.getDescripcionProducto());
+            map.put("precioProducto", producto.getPrecioProducto());
+            map.put("stockProducto", producto.getStockProducto());
+            map.put("unidad", producto.getUnidad());
+            map.put("imagenProducto", producto.getImagenProducto());
+            map.put("estado", producto.getEstado());
+            map.put("activo", producto.getActivo());
+            map.put("fechaDesactivacion", producto.getFechaDesactivacion());
+            map.put("motivoDesactivacion", producto.getMotivoDesactivacion());
+            map.put("ultimaActualizacion", producto.getUltimaActualizacion());
+            map.put("fechaPublicacion", producto.getFechaPublicacion());
+            
+            // Datos de subcategoría
+            if (producto.getSubcategoria() != null) {
+                map.put("idSubcategoria", producto.getSubcategoria().getIdSubcategoria());
+                map.put("nombreSubcategoria", producto.getSubcategoria().getNombreSubcategoria());
+                
+                // Datos de categoría
+                if (producto.getSubcategoria().getCategoria() != null) {
+                    map.put("idCategoria", producto.getSubcategoria().getCategoria().getIdCategoria());
+                    map.put("nombreCategoria", producto.getSubcategoria().getCategoria().getNombreCategoria());
+                }
+            }
+            
+            // Datos de vendedor
+            if (producto.getVendedor() != null) {
+                map.put("idVendedor", producto.getVendedor().getIdVendedor());
+                map.put("nombreEmpresa", producto.getVendedor().getNombreEmpresa());
+            }
+            
+            // URL de imagen (ya es URL completa de Cloudinary)
+            map.put("imagenUrl", producto.getImagenProducto());
+            
+            return map;
+        }).collect(Collectors.toList());
     }
 }

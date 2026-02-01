@@ -1,6 +1,5 @@
 package com.mercadolocalia.services.impl;
 
-import java.io.File;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -39,6 +38,10 @@ public class PedidoServiceImpl implements PedidoService {
     private PedidoVendedorRepository pedidoVendedorRepo;
     @Autowired
     private PagoService pagoService;
+    
+    // ✅ AGREGAR ESTA DEPENDENCIA PARA CLOUDINARY
+    @Autowired
+    private FileStorageService fileStorageService;
 
     // ============================================================
     // 🔥 CHECKOUT MULTI-VENDEDOR (VERSIÓN 1 - SIN ID)
@@ -623,7 +626,7 @@ public class PedidoServiceImpl implements PedidoService {
 	}
 
 	// ============================================================
-	// FINALIZAR PEDIDO (COMPLETO)
+	// FINALIZAR PEDIDO (COMPLETO) - CON CLOUDINARY ✅
 	// ============================================================
 	@Override
 	@Transactional
@@ -666,7 +669,7 @@ public class PedidoServiceImpl implements PedidoService {
 	    }
 
 	    // ===============================
-	    // TRANSFERENCIA
+	    // TRANSFERENCIA - CON CLOUDINARY ✅
 	    // ===============================
 	    else if (metodoPago.equalsIgnoreCase("TRANSFERENCIA")) {
 
@@ -675,33 +678,44 @@ public class PedidoServiceImpl implements PedidoService {
 	     }
 
 	     try {
-	         // ✅ RUTA ABSOLUTA
-	         String directorioBase = System.getProperty("user.dir");
-	         String carpeta = directorioBase + "/uploads/comprobantes/";
+	         System.out.println("📤 Subiendo comprobante a Cloudinary...");
 	         
-	         File directorio = new File(carpeta);
-	         if (!directorio.exists()) {
-	             boolean creado = directorio.mkdirs();
-	             System.out.println("📁 Directorio creado: " + creado + " en: " + carpeta);
+	         // ✅ VALIDAR EL COMPROBANTE
+	         if (!fileStorageService.isValidComprobante(comprobante)) {
+	             throw new RuntimeException("Formato de comprobante no válido. Use PDF, JPG, PNG o JPEG");
 	         }
-
-	         String nombre = System.currentTimeMillis() + "_" + comprobante.getOriginalFilename();
-	         File archivo = new File(carpeta + nombre);
 	         
-	         System.out.println("💾 Guardando archivo en: " + archivo.getAbsolutePath());
-	         comprobante.transferTo(archivo);
-
-	         // 🔥 GUARDAR COMPROBANTE
-	         pedido.setComprobanteUrl("/uploads/comprobantes/" + nombre);
+	         // ✅ VALIDAR TAMAÑO
+	         long fileSize = fileStorageService.getFileSize(comprobante);
+	         if (fileSize > 10 * 1024 * 1024) { // 10MB
+	             throw new RuntimeException("El comprobante es demasiado grande. Máximo 10MB");
+	         }
+	         
+	         System.out.println("✅ Comprobante validado:");
+	         System.out.println("   Tipo: " + comprobante.getContentType());
+	         System.out.println("   Tamaño: " + (fileSize / 1024) + " KB");
+	         System.out.println("   Nombre: " + comprobante.getOriginalFilename());
+	         
+	         // ✅ SUBIR A CLOUDINARY
+	         String comprobanteUrl = fileStorageService.storeComprobante(comprobante);
+	         
+	         System.out.println("✅ Comprobante subido exitosamente a Cloudinary:");
+	         System.out.println("   URL: " + comprobanteUrl);
+	         
+	         // 🔥 GUARDAR URL DE CLOUDINARY
+	         pedido.setComprobanteUrl(comprobanteUrl);
 	         pedido.setFechaSubidaComprobante(LocalDateTime.now());
 	         pedido.setEstadoPedido(EstadoPedido.PENDIENTE);
 	         pedido.setEstadoPago(EstadoPago.EN_VERIFICACION);
 	         pedido.setEstadoSeguimiento(EstadoSeguimientoPedido.ESPERANDO_PAGO);
 
+	     } catch (RuntimeException e) {
+	         System.err.println("❌ Error al validar comprobante: " + e.getMessage());
+	         throw e;
 	     } catch (Exception e) {
+	         System.err.println("❌ Error inesperado al subir comprobante: " + e.getMessage());
 	         e.printStackTrace();
-	         System.err.println("❌ Error al guardar comprobante: " + e.getMessage());
-	         throw new RuntimeException("Error al guardar comprobante: " + e.getMessage());
+	         throw new RuntimeException("Error al subir comprobante: " + e.getMessage());
 	     }
 	 }
 
@@ -751,7 +765,7 @@ public class PedidoServiceImpl implements PedidoService {
 	    // ===============================
 	    String mensajeNotificacion = "";
 	    if ("TRANSFERENCIA".equalsIgnoreCase(metodoPago)) {
-	        mensajeNotificacion = "📤 Comprobante subido exitosamente. El vendedor verificará tu pago.";
+	        mensajeNotificacion = "📤 Comprobante subido exitosamente a la nube. El vendedor verificará tu pago.";
 	    } else {
 	        mensajeNotificacion = "💳 Tu pedido #" + pedido.getIdPedido() + " fue procesado con método: " + metodoPago;
 	    }
@@ -762,6 +776,16 @@ public class PedidoServiceImpl implements PedidoService {
 	            "PEDIDO",
 	            pedido.getIdPedido()
 	    );
+	    
+	    // NOTIFICACIÓN AL VENDEDOR
+	    if ("TRANSFERENCIA".equalsIgnoreCase(metodoPago)) {
+	        notificacionService.crearNotificacion(
+	                pedido.getVendedor().getUsuario(),
+	                "📋 Nuevo comprobante subido para pedido #" + pedido.getIdPedido(),
+	                "PAGO",
+	                pedido.getIdPedido()
+	        );
+	    }
 
 	    return pedidoRepository.save(pedido);
 	}

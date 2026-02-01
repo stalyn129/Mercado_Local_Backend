@@ -3,6 +3,8 @@ package com.mercadolocalia.controllers;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import com.mercadolocalia.dto.CategoriaRequest;
@@ -39,8 +41,19 @@ public class CategoriaController {
     // 🔴 ELIMINAR
     // ============================================================
     @DeleteMapping("/eliminar/{id}")
-    public void eliminar(@PathVariable Integer id) {
-        categoriaService.eliminarCategoria(id);
+    public ResponseEntity<?> eliminar(@PathVariable Integer id) {
+        try {
+            // Primero verificar si tiene productos asociados
+            if (categoriaService.tieneProductosAsociados(id)) {
+                return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body("No se puede eliminar la categoría porque tiene productos asociados");
+            }
+            categoriaService.eliminarCategoria(id);
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body("Error al eliminar la categoría: " + e.getMessage());
+        }
     }
 
     // ============================================================
@@ -65,5 +78,18 @@ public class CategoriaController {
     @GetMapping("")
     public List<CategoriaResponse> listarRoot() {
         return categoriaService.listarCategorias();
+    }
+    
+    // ============================================================
+    // 🔍 VERIFICAR SI TIENE PRODUCTOS ASOCIADOS
+    // ============================================================
+    @GetMapping("/tiene-productos/{id}")
+    public ResponseEntity<Boolean> tieneProductos(@PathVariable Integer id) {
+        try {
+            boolean tieneProductos = categoriaService.tieneProductosAsociados(id);
+            return ResponseEntity.ok(tieneProductos);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(true);
+        }
     }
 }
