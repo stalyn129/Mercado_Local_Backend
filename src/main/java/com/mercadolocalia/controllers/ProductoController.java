@@ -19,7 +19,7 @@ import com.mercadolocalia.services.ProductoService;
 
 @RestController
 @RequestMapping("/productos")
-@CrossOrigin(origins = "http://localhost:3000") // Agrega CORS para React
+@CrossOrigin(origins = {"http://localhost:3000", "http://192.168.1.13:3000"})
 public class ProductoController {
 
     @Autowired
@@ -75,35 +75,113 @@ public class ProductoController {
     @PostMapping("/crear")
     public ResponseEntity<ProductoResponse> crearProducto(@RequestBody ProductoRequest request) {
         try {
+            System.out.println("📦 Creando producto: " + request.getNombreProducto());
             ProductoResponse response = productoService.crearProducto(request);
             return ResponseEntity.ok(response);
         } catch (Exception e) {
+            System.err.println("❌ Error creando producto: " + e.getMessage());
             return ResponseEntity.badRequest().body(null);
         }
     }
 
-    // ==================== EDITAR PRODUCTO (SOLO NOMBRE Y PRECIO) ====================
+    // ==================== EDITAR PRODUCTO COMPLETO ====================
     @PutMapping("/editar/{id}")
     public ResponseEntity<?> editarProducto(@PathVariable Integer id, @RequestBody Map<String, Object> updates) {
         try {
-            // Crear un ProductoRequest con solo los campos permitidos
+            System.out.println("✏️ Editando producto ID: " + id);
+            System.out.println("📦 Datos recibidos para edición: " + updates);
+            
+            // Crear un ProductoRequest con TODOS los campos
             ProductoRequest request = new ProductoRequest();
 
-            // Solo permitir nombre y precio
+            // ✅ PERMITIR TODOS LOS CAMPOS QUE NECESITA EL FRONTEND
             if (updates.containsKey("nombreProducto")) {
                 request.setNombreProducto((String) updates.get("nombreProducto"));
             }
 
-            if (updates.containsKey("precioProducto")) {
-                request.setPrecioProducto(Double.valueOf(updates.get("precioProducto").toString()));
+            if (updates.containsKey("descripcionProducto")) {
+                request.setDescripcionProducto((String) updates.get("descripcionProducto"));
             }
 
-            // No permitir stock, unidad, etc.
+            if (updates.containsKey("precioProducto")) {
+                try {
+                    Object precioObj = updates.get("precioProducto");
+                    if (precioObj instanceof Number) {
+                        request.setPrecioProducto(((Number) precioObj).doubleValue());
+                    } else if (precioObj instanceof String) {
+                        request.setPrecioProducto(Double.parseDouble((String) precioObj));
+                    }
+                } catch (Exception e) {
+                    throw new IllegalArgumentException("Precio inválido: " + updates.get("precioProducto"));
+                }
+            }
+
+            if (updates.containsKey("stockProducto")) {
+                try {
+                    Object stockObj = updates.get("stockProducto");
+                    if (stockObj instanceof Number) {
+                        request.setStockProducto(((Number) stockObj).intValue());
+                    } else if (stockObj instanceof String) {
+                        request.setStockProducto(Integer.parseInt((String) stockObj));
+                    }
+                } catch (Exception e) {
+                    throw new IllegalArgumentException("Stock inválido: " + updates.get("stockProducto"));
+                }
+            }
+
+            if (updates.containsKey("unidad")) {
+                request.setUnidad((String) updates.get("unidad"));
+            }
+
+            if (updates.containsKey("imagenProducto")) {
+                request.setImagenProducto((String) updates.get("imagenProducto"));
+            }
+
+            if (updates.containsKey("idSubcategoria")) {
+                try {
+                    Object subcategoriaObj = updates.get("idSubcategoria");
+                    if (subcategoriaObj instanceof Number) {
+                        request.setIdSubcategoria(((Number) subcategoriaObj).intValue());
+                    } else if (subcategoriaObj instanceof String) {
+                        request.setIdSubcategoria(Integer.parseInt((String) subcategoriaObj));
+                    }
+                } catch (Exception e) {
+                    throw new IllegalArgumentException("ID Subcategoría inválido: " + updates.get("idSubcategoria"));
+                }
+            }
+
+            if (updates.containsKey("idUsuario")) {
+                try {
+                    Object usuarioObj = updates.get("idUsuario");
+                    if (usuarioObj instanceof Number) {
+                        request.setIdUsuario(((Number) usuarioObj).intValue());
+                    } else if (usuarioObj instanceof String) {
+                        request.setIdUsuario(Integer.parseInt((String) usuarioObj));
+                    }
+                } catch (Exception e) {
+                    throw new IllegalArgumentException("ID Usuario inválido: " + updates.get("idUsuario"));
+                }
+            }
+
+            System.out.println("🔄 Enviando datos al servicio para actualización...");
+            
+            // ✅ Actualizar el producto con todos los campos
             ProductoResponse response = productoService.actualizarProducto(id, request);
+            
+            System.out.println("✅ Producto actualizado exitosamente: " + response.getNombreProducto());
+            
             return ResponseEntity.ok(response);
-        } catch (Exception e) {
+            
+        } catch (IllegalArgumentException e) {
+            System.err.println("❌ Error de validación: " + e.getMessage());
             Map<String, String> error = new HashMap<>();
             error.put("error", e.getMessage());
+            return ResponseEntity.badRequest().body(error);
+        } catch (Exception e) {
+            System.err.println("❌ Error actualizando producto: " + e.getMessage());
+            e.printStackTrace();
+            Map<String, String> error = new HashMap<>();
+            error.put("error", "Error al actualizar producto: " + e.getMessage());
             return ResponseEntity.badRequest().body(error);
         }
     }
@@ -166,11 +244,20 @@ public class ProductoController {
     @GetMapping("/{id}")
     public ResponseEntity<?> obtenerProducto(@PathVariable Integer id) {
         try {
+            System.out.println("🔍 Buscando producto ID: " + id);
             ProductoResponse response = productoService.obtenerPorId(id);
+            if (response == null) {
+                System.out.println("❌ Producto no encontrado: " + id);
+                Map<String, String> error = new HashMap<>();
+                error.put("error", "❌ Producto no encontrado con id " + id);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+            }
+            System.out.println("✅ Producto encontrado: " + response.getNombreProducto());
             return ResponseEntity.ok(response);
         } catch (Exception e) {
+            System.err.println("❌ Error obteniendo producto: " + e.getMessage());
             Map<String, String> error = new HashMap<>();
-            error.put("error", e.getMessage());
+            error.put("error", "Error al obtener producto: " + e.getMessage());
             return ResponseEntity.badRequest().body(error);
         }
     }
