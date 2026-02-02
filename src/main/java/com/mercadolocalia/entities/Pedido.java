@@ -280,20 +280,19 @@ public class Pedido {
         this.estadoPedido = EstadoPedido.PENDIENTE;
     }
     
-    // 🔥 MÉTODO PARA VERIFICAR PAGO
+ // En tu entidad Pedido.java, actualiza el método verificarPago
     public void verificarPago(boolean aprobado, Integer idVerificador, String motivo) {
         if (aprobado) {
             this.estadoPago = EstadoPago.PAGADO;
             this.estadoPedido = EstadoPedido.PROCESANDO;
             this.estadoPedidoVendedor = EstadoPedidoVendedor.EN_PROCESO;
+            this.estadoSeguimiento = EstadoSeguimientoPedido.RECOLECTANDO;
         } else {
             this.estadoPago = EstadoPago.RECHAZADO;
             this.motivoRechazo = motivo;
-            this.comprobanteUrl = null; // Permite subir nuevo comprobante
-            this.fechaSubidaComprobante = null;
         }
         
         this.fechaVerificacionPago = LocalDateTime.now();
-        this.verificadoPor = idVerificador;
+        this.verificadoPor = idVerificador;  // Esto ahora es Integer
     }
 }

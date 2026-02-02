@@ -135,52 +135,99 @@ public class PagoService {
         }
     }
 
-    // =========================================================
-    // VERIFICAR PAGO (PARA VENDEDOR)
-    // =========================================================
-    public Pedido verificarPago(Integer pedidoId, Integer vendedorId, VerificacionPagoRequest request) {
-        Pedido pedido = pedidoRepository.findById(pedidoId)
-            .orElseThrow(() -> new RuntimeException("Pedido no encontrado"));
-        
-        // Validar que el vendedor sea el dueño del pedido
-        if (pedido.getVendedor() == null || !pedido.getVendedor().getIdVendedor().equals(vendedorId)) {
-            throw new RuntimeException("No tienes permisos para verificar este pago");
-        }
-        
-        // Validar que esté en estado EN_VERIFICACION
-        if (pedido.getEstadoPago() != EstadoPago.EN_VERIFICACION) {
-            throw new RuntimeException("El pago no está pendiente de verificación");
-        }
-        
-        // Validar que tenga comprobante
-        if (pedido.getComprobanteUrl() == null || pedido.getComprobanteUrl().isEmpty()) {
-            throw new RuntimeException("El pedido no tiene comprobante para verificar");
-        }
-        
-        if (request.isAprobado()) {
-            // PAGO APROBADO
-            pedido.setEstadoPago(EstadoPago.PAGADO);
-            pedido.setEstadoPedido(EstadoPedido.PROCESANDO);
-            pedido.setEstadoPedidoVendedor(EstadoPedidoVendedor.EN_PROCESO);
-            pedido.setEstadoSeguimiento(EstadoSeguimientoPedido.RECOLECTANDO);
-        } else {
-            // PAGO RECHAZADO
-            pedido.setEstadoPago(EstadoPago.RECHAZADO);
-            pedido.setMotivoRechazo(request.getMotivo());
-            // El comprobante se mantiene para referencia, pero el estado permite re-subir
-        }
-        
-        pedido.setFechaVerificacionPago(LocalDateTime.now());
-        pedido.setVerificadoPor(vendedorId);
-        
-        // Actualizar también el registro de pago si existe
-        if (pedido.getPago() != null) {
-            pedido.getPago().setEstado(pedido.getEstadoPago());
-            pagoRepository.save(pedido.getPago());
-        }
-        
-        return pedidoRepository.save(pedido);
-    }
+ // =========================================================
+ // VERIFICAR PAGO (PARA VENDEDOR) - CORREGIDO
+ // =========================================================
+ public Pedido verificarPago(Integer pedidoId, Integer vendedorId, VerificacionPagoRequest request) {
+     Pedido pedido = pedidoRepository.findById(pedidoId)
+         .orElseThrow(() -> new RuntimeException("Pedido no encontrado"));
+     
+     // 🔥 CORRECCIÓN: Validación más flexible
+     boolean tienePermiso = false;
+     
+     // 1. Verificar si el vendedor está asignado directamente al pedido
+     if (pedido.getVendedor() != null && pedido.getVendedor().getIdVendedor().equals(vendedorId)) {
+         tienePermiso = true;
+         System.out.println("✅ Permiso concedido: Vendedor asignado al pedido");
+     }
+     // 2. Verificar si el vendedor tiene productos en este pedido
+     else if (pedido.getDetalles() != null && !pedido.getDetalles().isEmpty()) {
+         for (DetallePedido detalle : pedido.getDetalles()) {
+             if (detalle.getProducto() != null && 
+                 detalle.getProducto().getVendedor() != null &&
+                 detalle.getProducto().getVendedor().getIdVendedor().equals(vendedorId)) {
+                 
+                 tienePermiso = true;
+                 
+                 // 🔥 Asignar el vendedor al pedido si no estaba asignado
+                 if (pedido.getVendedor() == null) {
+                     pedido.setVendedor(detalle.getProducto().getVendedor());
+                     System.out.println("✅ Vendedor asignado al pedido desde producto");
+                 }
+                 break;
+             }
+         }
+     }
+     
+     if (!tienePermiso) {
+         System.out.println("❌ Validación de permisos falló:");
+         System.out.println("❌ Vendedor autenticado ID: " + vendedorId);
+         System.out.println("❌ Vendedor del pedido: " + 
+             (pedido.getVendedor() != null ? pedido.getVendedor().getIdVendedor() : "null"));
+         System.out.println("❌ Detalles del pedido: " + 
+             (pedido.getDetalles() != null ? pedido.getDetalles().size() : 0));
+         
+         throw new RuntimeException("No tienes permisos para verificar este pago");
+     }
+     
+     // Validar que esté en estado EN_VERIFICACION
+     if (pedido.getEstadoPago() != EstadoPago.EN_VERIFICACION) {
+         throw new RuntimeException("El pago no está pendiente de verificación. Estado actual: " + 
+             pedido.getEstadoPago());
+     }
+     
+     // Validar que tenga comprobante
+     if (pedido.getComprobanteUrl() == null || pedido.getComprobanteUrl().isEmpty()) {
+         throw new RuntimeException("El pedido no tiene comprobante para verificar");
+     }
+     
+     // Procesar la verificación
+     if (request.isAprobado()) {
+         // PAGO APROBADO
+         pedido.setEstadoPago(EstadoPago.PAGADO);
+         pedido.setEstadoPedido(EstadoPedido.PROCESANDO);
+         pedido.setEstadoPedidoVendedor(EstadoPedidoVendedor.EN_PROCESO);
+         pedido.setEstadoSeguimiento(EstadoSeguimientoPedido.RECOLECTANDO);
+         pedido.setMotivoRechazo(null); // Limpiar motivo si existía
+         System.out.println("✅ Pago APROBADO para pedido: " + pedidoId);
+     } else {
+         // PAGO RECHAZADO
+         pedido.setEstadoPago(EstadoPago.RECHAZADO);
+         pedido.setMotivoRechazo(request.getMotivo());
+         System.out.println("✅ Pago RECHAZADO para pedido: " + pedidoId + 
+             " - Motivo: " + request.getMotivo());
+     }
+     
+     pedido.setFechaVerificacionPago(LocalDateTime.now());
+     
+     // 🔥 CORRECCIÓN: verificadoPor es Integer, no String
+     pedido.setVerificadoPor(vendedorId);  // Esto ahora funciona porque ambos son Integer
+     
+     // Actualizar también el registro de pago si existe
+     if (pedido.getPago() != null) {
+         pedido.getPago().setEstado(pedido.getEstadoPago());
+         pagoRepository.save(pedido.getPago());
+     }
+     
+     // Guardar cambios en el pedido
+     Pedido pedidoActualizado = pedidoRepository.save(pedido);
+     
+     System.out.println("✅ Verificación completada exitosamente");
+     System.out.println("✅ Nuevo estado: " + pedidoActualizado.getEstadoPago());
+     System.out.println("✅ Verificado por (ID): " + pedidoActualizado.getVerificadoPor());
+     
+     return pedidoActualizado;
+ }
 
     // =========================================================
     // PAGO CON TARJETA (SIMULADO)

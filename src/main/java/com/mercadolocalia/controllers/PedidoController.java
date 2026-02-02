@@ -215,58 +215,100 @@ public class PedidoController {
         }
     }
 
-    // ============================================================
-    // 🔥 NUEVO: VERIFICAR PAGO (PARA VENDEDOR)
-    // ============================================================
-    @PostMapping("/{pedidoId}/verificar-pago")
-    @PreAuthorize("hasRole('VENDEDOR')")
-    public ResponseEntity<?> verificarPago(
-            @PathVariable Integer pedidoId,
-            @RequestBody VerificacionPagoRequest request,
-            Authentication authentication) {
-        
-        try {
-            System.out.println("🔍 ========================================");
-            System.out.println("🔍 VERIFICANDO PAGO");
-            System.out.println("🔍 ========================================");
-            System.out.println("🔍 ID Pedido: " + pedidoId);
-            System.out.println("🔍 Aprobado: " + request.isAprobado());
-            System.out.println("🔍 Motivo: " + request.getMotivo());
+ // ============================================================
+ // 🔥 NUEVO: VERIFICAR PAGO (PARA VENDEDOR) - MEJORADO
+ // ============================================================
+ @PostMapping("/{pedidoId}/verificar-pago")
+ @PreAuthorize("hasRole('VENDEDOR')")
+ public ResponseEntity<?> verificarPago(
+         @PathVariable Integer pedidoId,
+         @RequestBody VerificacionPagoRequest request,
+         Authentication authentication) {
+     
+     try {
+         System.out.println("🔍 ========================================");
+         System.out.println("🔍 VERIFICANDO PAGO - CON DEPURACIÓN");
+         System.out.println("🔍 ========================================");
+         System.out.println("🔍 ID Pedido: " + pedidoId);
+         System.out.println("🔍 Aprobado: " + request.isAprobado());
+         System.out.println("🔍 Motivo: " + request.getMotivo());
+         System.out.println("🔍 Usuario autenticado: " + authentication.getName());
 
-            // 1️⃣ Validar usuario autenticado
-            Usuario usuario = usuarioRepository.findByCorreo(authentication.getName())
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Usuario no autenticado"));
+         // 1️⃣ Validar usuario autenticado
+         Usuario usuario = usuarioRepository.findByCorreo(authentication.getName())
+                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Usuario no autenticado"));
 
-            // 2️⃣ Validar que sea vendedor
-            Vendedor vendedor = vendedorRepository.findByUsuario(usuario)
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "Usuario no es vendedor"));
+         System.out.println("✅ Usuario encontrado: " + usuario.getCorreo());
+         System.out.println("✅ Rol del usuario: " + usuario.getRol().getNombreRol());
 
-            System.out.println("✅ Vendedor encontrado: " + vendedor.getNombreEmpresa());
+         // 2️⃣ Validar que sea vendedor
+         Vendedor vendedor = vendedorRepository.findByUsuario(usuario)
+                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "Usuario no es vendedor"));
 
-            // 3️⃣ Verificar pago usando el servicio
-            Pedido pedidoVerificado = pagoService.verificarPago(pedidoId, vendedor.getIdVendedor(), request);
-            System.out.println("✅ ========================================");
-            System.out.println("✅ PAGO VERIFICADO EXITOSAMENTE");
-            System.out.println("✅ Nuevo estado pago: " + pedidoVerificado.getEstadoPago());
-            System.out.println("✅ Estado pedido: " + pedidoVerificado.getEstadoPedido());
-            System.out.println("✅ Verificado por: " + pedidoVerificado.getVerificadoPor());
-            System.out.println("✅ ========================================");
+         System.out.println("✅ Vendedor encontrado:");
+         System.out.println("✅ - ID: " + vendedor.getIdVendedor());
+         System.out.println("✅ - Nombre: " + vendedor.getNombreEmpresa());
 
-            return ResponseEntity.ok(pedidoVerificado);
+         // 3️⃣ DEPURACIÓN: Obtener el pedido para inspeccionarlo
+         Pedido pedido = pedidoRepository.findById(pedidoId)
+                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Pedido no encontrado"));
 
-        } catch (ResponseStatusException e) {
-            System.out.println("❌ ERROR CONTROLADO: " + e.getReason());
-            throw e;
-        } catch (Exception e) {
-            System.out.println("❌ ========================================");
-            System.out.println("❌ ERROR VERIFICANDO PAGO");
-            System.out.println("❌ ========================================");
-            System.out.println("❌ Mensaje: " + e.getMessage());
-            e.printStackTrace();
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, 
-                    "Error al verificar el pago: " + e.getMessage());
-        }
-    }
+         System.out.println("📊 ========== DEPURACIÓN DEL PEDIDO ==========");
+         System.out.println("📊 ID Pedido: " + pedido.getIdPedido());
+         System.out.println("📊 Estado pago: " + pedido.getEstadoPago());
+         System.out.println("📊 Método pago: " + pedido.getMetodoPago());
+         System.out.println("📊 Comprobante URL: " + 
+             (pedido.getComprobanteUrl() != null ? "SÍ" : "NO"));
+         System.out.println("📊 Vendedor asignado: " + 
+             (pedido.getVendedor() != null ? 
+                 "ID " + pedido.getVendedor().getIdVendedor() + " - " + 
+                 pedido.getVendedor().getNombreEmpresa() : "NULL"));
+         
+         // Mostrar detalles del pedido
+         if (pedido.getDetalles() != null) {
+             System.out.println("📊 Número de detalles: " + pedido.getDetalles().size());
+             for (int i = 0; i < pedido.getDetalles().size(); i++) {
+                 DetallePedido detalle = pedido.getDetalles().get(i);
+                 if (detalle.getProducto() != null && detalle.getProducto().getVendedor() != null) {
+                     System.out.println("📊   Producto " + (i+1) + ": " + 
+                         detalle.getProducto().getNombreProducto() + 
+                         " - Vendedor ID: " + detalle.getProducto().getVendedor().getIdVendedor());
+                 }
+             }
+         }
+         System.out.println("📊 =========================================");
+
+         // 4️⃣ Verificar pago usando el servicio MEJORADO
+         System.out.println("🔍 Llamando a pagoService.verificarPago()...");
+         
+         Pedido pedidoVerificado = pagoService.verificarPago(pedidoId, vendedor.getIdVendedor(), request);
+         
+         System.out.println("✅ ========================================");
+         System.out.println("✅ PAGO VERIFICADO EXITOSAMENTE");
+         System.out.println("✅ Nuevo estado pago: " + pedidoVerificado.getEstadoPago());
+         System.out.println("✅ Estado pedido: " + pedidoVerificado.getEstadoPedido());
+         System.out.println("✅ Estado vendedor: " + pedidoVerificado.getEstadoPedidoVendedor());
+         System.out.println("✅ Verificado por: " + pedidoVerificado.getVerificadoPor());
+         System.out.println("✅ ========================================");
+
+         return ResponseEntity.ok(pedidoVerificado);
+
+     } catch (ResponseStatusException e) {
+         System.out.println("❌ ERROR CONTROLADO: " + e.getReason());
+         throw e;
+     } catch (RuntimeException e) {
+         System.out.println("❌ ERROR EN SERVICIO: " + e.getMessage());
+         throw new ResponseStatusException(HttpStatus.FORBIDDEN, e.getMessage());
+     } catch (Exception e) {
+         System.out.println("❌ ========================================");
+         System.out.println("❌ ERROR VERIFICANDO PAGO");
+         System.out.println("❌ ========================================");
+         System.out.println("❌ Mensaje: " + e.getMessage());
+         e.printStackTrace();
+         throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, 
+                 "Error al verificar el pago: " + e.getMessage());
+     }
+ }
 
     // ============================================================
     // 🔥 NUEVO: OBTENER PEDIDOS PENDIENTES DE VERIFICACIÓN (VENDEDOR)
@@ -380,9 +422,18 @@ public class PedidoController {
                 detallePago.put("fechaSubidaComprobante", pedido.getFechaSubidaComprobante());
             }
             
+         // En PedidoController.obtenerDetallePago()
             if (pedido.getFechaVerificacionPago() != null) {
                 detallePago.put("fechaVerificacionPago", pedido.getFechaVerificacionPago());
                 detallePago.put("verificadoPor", pedido.getVerificadoPor());
+                
+                // 🔥 Opcional: Si quieres mostrar también el nombre del vendedor verificador
+                if (pedido.getVerificadoPor() != null) {
+                    Optional<Vendedor> verificador = vendedorRepository.findById(pedido.getVerificadoPor());
+                    if (verificador.isPresent()) {
+                        detallePago.put("verificadorNombre", verificador.get().getNombreEmpresa());
+                    }
+                }
             }
             
             if (pedido.getMotivoRechazo() != null) {
